@@ -567,7 +567,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 
 		dev_dbg(musb->controller, "SESSION_REQUEST (%s)\n",
 			otg_state_string(musb->xceiv->state));
-
+#if 0
 		/* IRQ arrives from ID pin sense or (later, if VBUS power
 		 * is removed) SRP.  responses are time critical:
 		 *  - turn on VBUS (with silicon-specific mechanism)
@@ -580,6 +580,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 		musb->xceiv->state = OTG_STATE_A_IDLE;
 		MUSB_HST_MODE(musb);
 		musb_platform_set_vbus(musb, 1);
+#endif
 
 		handled = IRQ_HANDLED;
 	}
@@ -603,6 +604,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 		 * REVISIT:  do delays from lots of DEBUG_KERNEL checks
 		 * make trouble here, keeping VBUS < 4.4V ?
 		 */
+#if 0
 		switch (musb->xceiv->state) {
 		case OTG_STATE_A_HOST:
 			/* recovery is dicey once we've gotten past the
@@ -629,6 +631,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 		default:
 			break;
 		}
+#endif
 
 		dev_dbg(musb->controller, "VBUS_ERROR in %s (%02x, %s), retry #%d, port1 %08x\n",
 				otg_state_string(musb->xceiv->state),
@@ -649,8 +652,10 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				musb->port1_status);
 
 		/* go through A_WAIT_VFALL then start a new session */
+/*
 		if (!ignore)
 			musb_platform_set_vbus(musb, 0);
+*/
 		handled = IRQ_HANDLED;
 	}
 
@@ -685,9 +690,11 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 			if (musb->is_active) {
 				musb->xceiv->state = OTG_STATE_B_WAIT_ACON;
 				dev_dbg(musb->controller, "HNP: Setting timer for b_ase0_brst\n");
+#if 0
 				mod_timer(&musb->otg_timer, jiffies
 					+ msecs_to_jiffies(
 							OTG_TIME_B_ASE0_BRST));
+#endif
 			}
 			break;
 		case OTG_STATE_A_WAIT_BCON:
