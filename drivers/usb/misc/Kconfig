@@ -294,3 +294,27 @@ config UCSI
 
 	  To compile the driver as a module, choose M here: the module will be
 	  called ucsi.
+
+config USB_AKBIKEPOWER
+        tristate "USB interface to bike dynamo voltage measurement"
+        depends on USB
+        help
+          This driver provides a /sys/class/power_supply/bike containing
+          nodes to measure dynamo voltage (after rectifying)
+
+config USB_AKBIKE
+        tristate "Bike data streaming (currently speed information)"
+        depends on USB
+        help
+          This driver provides an interface /dev/akbikeX which
+          provides some information for dead reckoning
+          (currently speed information)
+
+config USB_AKPICI2C
+        tristate "USB PIC programmer and I2C bus master"
+        depends on USB && I2C
+        help
+          This driver provides an interface /dev/akpicX
+          to program PIC microcontrollers and also an
+          i2c bus interface
+
