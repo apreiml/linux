@@ -28,3 +28,7 @@ obj-$(CONFIG_USB_SEVSEG)		+= usbsevseg.o
 obj-$(CONFIG_USB_YUREX)			+= yurex.o
 
 obj-$(CONFIG_USB_SISUSBVGA)		+= sisusbvga/
+obj-$(CONFIG_USB_AKBIKEPOWER)   += akbikepower.o
+obj-$(CONFIG_USB_AKBIKE)        += akbike.o
+obj-$(CONFIG_USB_AKPICI2C)      += akpic.o
+
