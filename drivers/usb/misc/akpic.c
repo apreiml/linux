@@ -74,6 +74,7 @@ typedef struct {
 	// struct urb *tx_urb;
 	int open_cnt;
 	int is_closed;
+	int subcl;
 	int devid;
 	struct i2c_adapter *i2c_ops;
 	struct kref             kref;
@@ -393,37 +394,46 @@ static int akpic_ioctl(struct inode *inode, struct file *file,
 	return -ENOTTY;
 }
 
-static int akpic_write_i2c_byte(akpic_t *dev,u8 chr)
+static int akpic_write_i2c_byte(akpic_t *dev,u8 chr, int write_start, int write_stop)
 {
-	u8 buf[3]={0x98,0,0xb1}; 
+	u8 buf[5]={0x9f,0x98,0,0xb1,0x9e}; 
 	int i;
 	int act_len=0;
 	int retval=0;
+        int slen=sizeof(buf);
 	DECLARE_WAITQUEUE(wait,current);
-	for(i=0;i<8;i++) {
-		buf[1]=buf[1]<<1;
-		if (chr&(1<<i)) {
-			buf[1]|=1;
+        if (dev->subcl == 0xca) {
+		buf[2]=chr;
+	} else {
+		for(i=0;i<8;i++) {
+			buf[1]=buf[1]<<1;
+			if (chr&(1<<i)) {
+				buf[1]|=1;
+			}
 		}
-	}
+        }
 	
 	dev->inpos=dev->outpos=0;
-	akpic_write_data(dev,buf,sizeof(buf));
+        // if ((!write_stop) || (dev->subcl != 0xca))
+		slen--;
+        if (write_start && (dev->subcl == 0xca))
+		akpic_write_data(dev,buf,slen);
+	else
+		akpic_write_data(dev,buf+1,slen-1);
 	i=0;
 	add_wait_queue(&dev->rcv_wait,&wait);
-	while((dev->inpos == dev->outpos)&&(!dev->is_closed)) {
+	while((dev->inpos == dev->outpos) && (!dev->is_closed)) {
 		set_current_state(TASK_INTERRUPTIBLE); 
 		if (dev->inpos != dev->outpos)
-          break;
+    		      break;
 		if (dev->is_closed)
 			break;
 		schedule();
-        if (signal_pending(current))  {
-		printk("interrupt in akpic_write_i2c\n");
-		retval=-EINTR;
-		break;
-        }
-	
+       		if (signal_pending(current))  {
+			printk("interrupt in akpic_write_i2c\n");
+			retval=-EINTR;
+			break;
+        	}
 	}
 	current->state=TASK_RUNNING;
 	remove_wait_queue(&dev->rcv_wait,&wait);
@@ -435,7 +445,7 @@ static int akpic_write_i2c_byte(akpic_t *dev,u8 chr)
 }
 
 /* max 64/4=16 bytes */
-static int akpic_read_i2c_bytes(akpic_t *dev, u8 *b,int count,int ack)
+static int akpic_read_i2c_bytes(akpic_t *dev, u8 *b,int count,int ack, int write_stop)
 {
 	/*u8 buf[]={0x00,0xb8,0x00,0x04,0x91,0x00}; */
 	u8 buf[]={0xb8,0x91,0x00};
@@ -453,8 +463,15 @@ static int akpic_read_i2c_bytes(akpic_t *dev, u8 *b,int count,int ack)
 		return 0;
 	if (ack)
 		buf2[i*sizeof(buf)]=0xff;
+	act_len = count*sizeof(buf)+1;
+#if 0
+        if ((dev->subcl == 0xca) && (write_stop)) {
+		buf2[act_len] = 0x9e;
+		act_len++;
+	} 
+#endif
 	dev->inpos=dev->outpos=0;
-	akpic_write_data(dev,buf2,count*sizeof(buf)+1);
+	akpic_write_data(dev,buf2,act_len);
 	i=0;
 	add_wait_queue(&dev->rcv_wait,&wait);
 	while((dev->inpos < count)&(!dev->is_closed)) {
@@ -478,10 +495,14 @@ static int akpic_read_i2c_bytes(akpic_t *dev, u8 *b,int count,int ack)
 	while(count>0) {
 		r=dev->buf[dev->outpos];
 		*b=0;
-		for(i=0;i<8;i++) {
-			*b=(*b)<<1; 
-			if (r&(1<<i)) {
-				*b|=1;
+                if (dev->subcl == 0xca) {
+			*b=r;
+		} else {
+			for(i=0;i<8;i++) {
+				*b=(*b)<<1; 
+				if (r&(1<<i)) {
+					*b|=1;
+				}
 			}
 		}
 		count--;
@@ -511,9 +532,10 @@ static int akpic_i2c_xfer(struct i2c_adapter *adap,
 	}
 	//printk("i2c_xfer dev_avail\n");
 	while(num) {
-		akpic_write_data(dev,start_msg,sizeof(start_msg));
+		if (dev->subcl != 0xca) 
+			akpic_write_data(dev,start_msg,sizeof(start_msg));
 		if (msgs->flags&I2C_M_RD) {
-			ret=akpic_write_i2c_byte(dev,msgs->addr*2+1);
+			ret=akpic_write_i2c_byte(dev,msgs->addr*2+1,1,msgs->len == 0);
 			//printk("written rd addr %02x:%d\n",msgs->addr,ret);
 			if (ret) {
 				ret=-EREMOTEIO;
@@ -524,21 +546,21 @@ static int akpic_i2c_xfer(struct i2c_adapter *adap,
 				l=msgs->len-i;
 				if (l>16)
 					l=16;
-				ret=akpic_read_i2c_bytes(dev,msgs->buf+i,l,(l+i)==msgs->len);
+				ret=akpic_read_i2c_bytes(dev,msgs->buf+i,l,(l+i)==msgs->len,(l+i)==msgs->len);
 				if (ret) {
 					ret=-EIO;
 					goto fail;
 				}
 			}
 		} else {
-			ret=akpic_write_i2c_byte(dev,msgs->addr*2);
+			ret=akpic_write_i2c_byte(dev,msgs->addr*2,1,msgs->len == 0);
 			//printk("written addr %02x:%d\n",msgs->addr,ret);
 			if (ret) {
 				ret=-EREMOTEIO;
 				goto fail;
 			}
 			for(i=0;i<msgs->len;i++) {
-				ret=akpic_write_i2c_byte(dev,msgs->buf[i]);
+				ret=akpic_write_i2c_byte(dev,msgs->buf[i],0,(1+i)==msgs->len);
 				if (ret) {
 					ret=-EREMOTEIO;
 					goto fail;
@@ -549,7 +571,10 @@ static int akpic_i2c_xfer(struct i2c_adapter *adap,
 		msgs++;
 	}
 fail:
-	akpic_write_data(dev,stop_msg,sizeof(stop_msg));
+	if (dev->subcl != 0xca) 
+		akpic_write_data(dev,stop_msg,sizeof(stop_msg));
+	else
+		akpic_write_data(dev,"\x9e",1);
 	//printk("i2c_xfer finished\n");
 	akpic_unrefpic(dev);
 	//printk("i2c_xfer unrefd\n");
@@ -594,7 +619,7 @@ static int akpic_probe(struct usb_interface *intf,
 		.name="akpic-i2c",
 		.owner=THIS_MODULE,
 		.retries=2,
-		.class=I2C_CLASS_HWMON,
+		.class=0,
 	};
 	struct usb_device *udev;
 	struct usb_interface *intfs;
@@ -639,8 +664,11 @@ static int akpic_probe(struct usb_interface *intf,
 	for(i=0;i<MAX_DEVS;i++) {
 		if (!devtable[i]) {
 			dev->devid=i;
+			dev->subcl=0;
+                        if (intf->cur_altsetting)
+				dev->subcl = intf->cur_altsetting->desc.bInterfaceSubClass;
 			devtable[i]=dev;
-			if ((register_i2c)||((intf->cur_altsetting)&&(intf->cur_altsetting->desc.bInterfaceSubClass==0xc1))) {
+			if ((register_i2c)||(dev->subcl==0xc1)||(dev->subcl==0xca)) {
 				i2c_akpic_add_bus(&akpic_i2c_ops,dev,!register_i2c);
 			}
 			break;
