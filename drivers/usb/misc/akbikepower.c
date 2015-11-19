@@ -23,6 +23,7 @@ static	int vinuv;
 static	int vctluv;
 static	int vin,vctl;
 static  int tachoperiod;
+static  int tachocounter;
 static  int do_reset;
 static  unsigned char powerswitchcmd;
 
@@ -132,7 +133,11 @@ static void akbike_read_bulk_callback(struct urb *urb)
            t = (tb[6]*256+tb[7])*256+tb[8];
            if (t > 65536) { /* skip errornous measurements giving insane high speeds */
              tachoperiod=t*2;
-           }
+           } else if (t == 0) {
+             tachoperiod = 0;
+	   }
+
+           tachocounter = (((tb[9] *256)+tb[10])*256+tb[11])*256+tb[12];
 	   schedule_delayed_work(&dev->work,cache_time*HZ/1000);
 	   return;
         } else {
@@ -259,7 +264,42 @@ static ssize_t do_usb_reset(struct device *ddev,
         do_reset=1;
         return count;
 }
+
+/* this enables/disables transfer from gps to usb */
+static ssize_t set_gps2usb(struct device *ddev,
+			  struct device_attribute *attr,
+			  const char *buf,size_t count)
+{
+   unsigned int sw;
+   if (sscanf(buf,"%u", &sw) != 1)
+	return -EINVAL;
+   switch(sw) {
+ 	case 1: powerswitchcmd = 0x4d; break;
+	case 0: powerswitchcmd = 0x4c; break;
+	default: return -EINVAL;
+   }
+   return count;
+}
+
+/* this enables/disables transfer from gps to sdcard */
+static ssize_t set_gps2sdcard(struct device *ddev,
+			  struct device_attribute *attr,
+			  const char *buf,size_t count)
+{
+   unsigned int sw;
+   if (sscanf(buf,"%u", &sw) != 1)
+	return -EINVAL;
+   switch(sw) {
+ 	case 1: powerswitchcmd = 0x4b; break;
+	case 0: powerswitchcmd = 0x4a; break;
+	default: return -EINVAL;
+   }
+   return count;
+}
+
 static DEVICE_ATTR(reset, S_IWUSR, NULL, do_usb_reset);
+static DEVICE_ATTR(gps2sdcard, S_IWUSR, NULL, set_gps2sdcard);
+static DEVICE_ATTR(gps2usb, S_IWUSR, NULL, set_gps2usb);
 static DEVICE_ATTR(power_switches, S_IWUSR, NULL, set_powerswitch);
 
 static ssize_t show_vctrl_voltage(struct device *ddev,
@@ -277,14 +317,26 @@ static ssize_t show_tacho_period(struct device *ddev,
         return sprintf(buf,"%u\n",tachoperiod);
 }
 
+static ssize_t show_tacho_counter(struct device *ddev,
+			         struct device_attribute *attr,
+			         char *buf)
+{
+/*	akbike_t *dev = dev_get_drvdata(ddev); */
+        return sprintf(buf,"%u\n",tachocounter);
+}
+
 static DEVICE_ATTR(vctrl_voltage, S_IRUGO, show_vctrl_voltage, NULL);
 static DEVICE_ATTR(tacho_period, S_IRUGO, show_tacho_period, NULL);
+static DEVICE_ATTR(tacho_counter, S_IRUGO, show_tacho_counter, NULL);
 
 static struct attribute *bikepower_sysfs_entries[] = {
 	&dev_attr_vctrl_voltage.attr,
 	&dev_attr_reset.attr,
 	&dev_attr_power_switches.attr,
         &dev_attr_tacho_period.attr,
+        &dev_attr_tacho_counter.attr,
+	&dev_attr_gps2usb.attr,
+	&dev_attr_gps2sdcard.attr,
 	NULL
 };
 
