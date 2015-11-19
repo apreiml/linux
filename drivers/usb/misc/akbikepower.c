@@ -17,7 +17,8 @@
 #define DRIVER_DESC "Bike controller power"
 static const char driver_name [] = "akbikepower";
 static  struct device *psp_dev;
-static	struct power_supply *psp;
+static	struct power_supply_desc *psp_desc;
+static	struct power_supply *psp_glob;
 static	int vinuv;
 static	int vctluv;
 static	int vin,vctl;
@@ -398,19 +399,6 @@ static int akbike_probe(struct usb_interface *intf,
 	dev->epin = epin;
         dev->devver = __le16_to_cpu(interface_to_usbdev(intf)->descriptor.bcdDevice);
 	dev->rcvbuf = kmalloc(64, GFP_KERNEL);
-	kref_init(&dev->kref);
-	usb_driver_claim_interface(&akbike_driver, intf, NULL);
-	usb_set_intfdata(intf, dev);
-	dev_set_drvdata(psp_dev,dev);
-;
-
-	if ((dev->rx_urb = usb_alloc_urb(0, GFP_KERNEL)) == NULL) {
-		goto error;
-	}
-
-	INIT_DELAYED_WORK(&dev->work,bikepower_work);
-	schedule_delayed_work(&dev->work,HZ);
-	dev_info(&intf->dev,"bike power supply registered\n");
 	return 0;
 error:
 	if (dev->rx_urb) {
@@ -450,20 +438,22 @@ static int __init usb_akbike_init(void)
 {
 	int retval;
 	printk(DRIVER_DESC " " DRIVER_VERSION "\n");
+        struct power_supply_config psy_cfg = { .drv_data = NULL, }; /* fill it again */
+
 	psp_dev=root_device_register("bikepower");
 	/*kzalloc(sizeof(struct device),GFP_KERNEL); 
 	  device_initialize(psp_dev); */
-	psp=kzalloc(sizeof(struct power_supply),GFP_KERNEL);
-	psp->name = "bike";  
-	psp->type = POWER_SUPPLY_TYPE_MAINS;
-	psp->properties = bikepower_props;
-	psp->num_properties = ARRAY_SIZE(bikepower_props);
-	psp->get_property = bikepower_get_property;
-	retval = power_supply_register(psp_dev,psp);
-	if (retval) {
+	psp_desc=kzalloc(sizeof(struct power_supply_desc),GFP_KERNEL);
+	psp_desc->name = "bike";  
+	psp_desc->type = POWER_SUPPLY_TYPE_MAINS;
+	psp_desc->properties = bikepower_props;
+	psp_desc->num_properties = ARRAY_SIZE(bikepower_props);
+	psp_desc->get_property = bikepower_get_property;
+	psp_glob = power_supply_register(psp_dev,psp_desc,&psy_cfg);
+	if (NULL == psp_glob) {
 		dev_err(psp_dev,"Not able to register powerdev.");
-		kfree(psp);
-		psp=NULL;
+		kfree(psp_desc);
+                psp_desc = NULL;
 	}
 	
 	if (sysfs_create_group(&psp_dev->kobj,
@@ -478,9 +468,9 @@ static int __init usb_akbike_init(void)
 static void __exit usb_akbike_exit(void)
 {
 	usb_deregister(&akbike_driver);
-	if (psp) {
-		power_supply_unregister(psp);
-		kfree(psp);
+	if (psp_glob) {
+		power_supply_unregister(psp_glob);
+		kfree(psp_desc);
 	}
 	if (psp_dev) {
 		sysfs_remove_group(&psp_dev->kobj, &bikepower_attr_group);
