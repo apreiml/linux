@@ -16,3 +16,9 @@ config LIBERTAS_THINFIRM_USB
 	depends on LIBERTAS_THINFIRM && USB
 	---help---
 	  A driver for Marvell Libertas 8388 USB devices using thinfirm.
+
+config LIBERTAS_THINFIRM_SDIO
+	tristate "Marvell Libertas 8388 SDIO 802.11b/g cards with thin firmware"
+	depends on LIBERTAS_THINFIRM && MMC
+	---help---
+	  A driver for Marvell Libertas 8388 SDIO devices using thinfirm.
