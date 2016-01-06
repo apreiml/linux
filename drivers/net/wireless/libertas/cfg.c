@@ -2049,6 +2049,17 @@ int lbs_set_power_mgmt(struct wiphy *wiphy, struct net_device *dev,
 		else
 			return -EINVAL;
 	}
+	/* firmware does not work well with too long latency with power saving
+	 * enabled, so do not enable it if there is only polling, no
+	 * interrupts (like in some sdio hosts which can only
+	 * poll for sdio irqs)
+	 */
+	if  (priv->is_polling) {
+		if (!enabled)
+			return 0;
+		else
+			return -EINVAL;
+	}
 	if (!enabled) {
 		priv->psmode = LBS802_11POWERMODECAM;
 		if (priv->psstate != PS_STATE_FULL_POWER)
