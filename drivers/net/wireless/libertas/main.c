@@ -227,6 +227,7 @@ int lbs_stop_iface(struct lbs_private *priv)
 
 	cancel_work_sync(&priv->mcast_work);
 	del_timer_sync(&priv->tx_lockup_timer);
+	lbs_exit_auto_deep_sleep(priv);
 
 	/* Disable command processing, and wait for all commands to complete */
 	lbs_deb_main("waiting for commands to complete\n");
@@ -824,7 +825,8 @@ static void auto_deepsleep_timer_fn(unsigned long data)
 	} else {
 		if (priv->is_auto_deep_sleep_enabled &&
 		    (!priv->wakeup_dev_required) &&
-		    (priv->connect_status != LBS_CONNECTED)) {
+		    (priv->connect_status != LBS_CONNECTED) &&
+		    priv->iface_running) {
 			struct cmd_header cmd;
 
 			lbs_deb_main("Entering auto deep sleep mode...\n");
