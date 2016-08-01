@@ -451,6 +451,17 @@ static int akbike_probe(struct usb_interface *intf,
 	dev->epin = epin;
         dev->devver = __le16_to_cpu(interface_to_usbdev(intf)->descriptor.bcdDevice);
 	dev->rcvbuf = kmalloc(64, GFP_KERNEL);
+        kref_init(&dev->kref);
+        usb_driver_claim_interface(&akbike_driver, intf, NULL);
+        usb_set_intfdata(intf, dev);
+        dev_set_drvdata(psp_dev,dev);
+        if ((dev->rx_urb = usb_alloc_urb(0, GFP_KERNEL)) == NULL) {
+                goto error;
+        }
+
+        INIT_DELAYED_WORK(&dev->work,bikepower_work);
+        schedule_delayed_work(&dev->work,HZ);
+        dev_info(&intf->dev,"bike power supply registered\n");
 	return 0;
 error:
 	if (dev->rx_urb) {
