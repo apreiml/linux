@@ -24,6 +24,8 @@ static	int vctluv;
 static	int vin,vctl;
 static  int tachoperiod;
 static  int tachocounter;
+static  uint32_t last_sd_block;
+static  uint16_t last_sd_state;
 static  int do_reset;
 static  unsigned char powerswitchcmd;
 
@@ -138,6 +140,8 @@ static void akbike_read_bulk_callback(struct urb *urb)
 	   }
 
            tachocounter = (((tb[9] *256)+tb[10])*256+tb[11])*256+tb[12];
+	   last_sd_block = (((tb[13] *256)+tb[14])*256+tb[15])*256+tb[16];
+	   last_sd_state = (tb[17] *256)+tb[18];
 	   schedule_delayed_work(&dev->work,cache_time*HZ/1000);
 	   return;
         } else {
@@ -325,9 +329,25 @@ static ssize_t show_tacho_counter(struct device *ddev,
         return sprintf(buf,"%u\n",tachocounter);
 }
 
+static ssize_t show_sd_block(struct device *ddev,
+			         struct device_attribute *attr,
+			         char *buf)
+{
+/*	akbike_t *dev = dev_get_drvdata(ddev); */
+        return sprintf(buf,"%u\n",last_sd_block);
+}
+static ssize_t show_sd_state(struct device *ddev,
+			         struct device_attribute *attr,
+			         char *buf)
+{
+/*	akbike_t *dev = dev_get_drvdata(ddev); */
+        return sprintf(buf,"%u\n",last_sd_state);
+}
 static DEVICE_ATTR(vctrl_voltage, S_IRUGO, show_vctrl_voltage, NULL);
 static DEVICE_ATTR(tacho_period, S_IRUGO, show_tacho_period, NULL);
 static DEVICE_ATTR(tacho_counter, S_IRUGO, show_tacho_counter, NULL);
+static DEVICE_ATTR(sd_block, S_IRUGO, show_sd_block, NULL);
+static DEVICE_ATTR(sd_state, S_IRUGO, show_sd_state, NULL);
 
 static struct attribute *bikepower_sysfs_entries[] = {
 	&dev_attr_vctrl_voltage.attr,
@@ -337,6 +357,8 @@ static struct attribute *bikepower_sysfs_entries[] = {
         &dev_attr_tacho_counter.attr,
 	&dev_attr_gps2usb.attr,
 	&dev_attr_gps2sdcard.attr,
+	&dev_attr_sd_block.attr,
+	&dev_attr_sd_state.attr,
 	NULL
 };
 
@@ -375,7 +397,7 @@ static void bikepower_work(struct work_struct *work)
         if (dev->devver > 2) {
 		usb_fill_bulk_urb(dev->rx_urb, dev->udev,
 				  usb_rcvbulkpipe(dev->udev, dev->epin),
-				  dev->rcvbuf, 16, akbike_read_bulk_callback, dev);
+				  dev->rcvbuf, 32, akbike_read_bulk_callback, dev);
 		usb_submit_urb(dev->rx_urb, GFP_ATOMIC);
 	  akbike_write(dev,"\x30",1);
         } else {
