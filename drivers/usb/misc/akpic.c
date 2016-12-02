@@ -604,7 +604,8 @@ static void i2c_akpic_add_bus(struct i2c_adapter *ada,
 	adap->timeout=100;
 	adap->algo_data=(void *)dev->devid; 
 	dev->i2c_ops=adap;
-	akpic_write_data(dev,"\xfb",1);
+	if (dev->subcl != 0xca)
+		akpic_write_data(dev,"\xfb",1);
 	i2c_add_adapter(adap); 
 	if (add_devices) {
 		i2c_new_device(adap, &akpic_bus_info);	
