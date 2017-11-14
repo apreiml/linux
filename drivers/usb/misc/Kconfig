@@ -299,4 +299,3 @@ config USB_AKPICI2C
           to program PIC microcontrollers and also an
           i2c bus interface
 
->>>>>>> 3bee7cf8283f... various bike drivers
