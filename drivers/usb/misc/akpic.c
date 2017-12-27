@@ -17,6 +17,7 @@
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/sched.h>
+#include <linux/sched/signal.h>
 #include <linux/init.h>
 #include <linux/signal.h>
 #include <linux/slab.h>
@@ -29,7 +30,7 @@
 #include <linux/i2c.h>
 //#include <linux/i2c-id.h>
 
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #define DRIVER_VERSION "v0.1"
 #define DRIVER_AUTHOR "Andreas Kemnade <andreas@kemnade.info>"

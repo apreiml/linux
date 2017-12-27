@@ -1,11 +1,12 @@
 #include <linux/sched.h>
 #include <linux/init.h>
 #include <linux/signal.h>
+#include <linux/sched/signal.h>
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/usb.h>
 #include <linux/version.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #define DRIVER_VERSION "v0.1"
 #define DRIVER_AUTHOR "Andreas Kemnade <andreas@kemnade.info>"
@@ -92,7 +93,6 @@ static void akbike_read_bulk_callback(struct urb *urb)
 		printk("urb rx status: %d\n",urb->status);
 		goto goon;
 	}
-	printk("got %d bytes\n",cp_len);
 	if ((dev->inpos+cp_len) >=sizeof(dev->buf)) {
 		int rest=sizeof(dev->buf)-dev->inpos;
 		memcpy(dev->buf+dev->inpos,urb->transfer_buffer, rest);
