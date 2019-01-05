@@ -204,6 +204,7 @@ static int isp_xclk_enable(struct clk_hw *hw)
 
 	spin_lock_irqsave(&xclk->lock, flags);
 	isp_xclk_update(xclk, xclk->divider);
+	printk("xclk %d enable\n", xclk->id);
 	xclk->enabled = true;
 	spin_unlock_irqrestore(&xclk->lock, flags);
 
@@ -217,6 +218,7 @@ static void isp_xclk_disable(struct clk_hw *hw)
 
 	spin_lock_irqsave(&xclk->lock, flags);
 	isp_xclk_update(xclk, 0);
+	printk("xclk %d disable\n", xclk->id);
 	xclk->enabled = false;
 	spin_unlock_irqrestore(&xclk->lock, flags);
 }
@@ -1314,7 +1316,7 @@ static int isp_enable_clocks(struct isp_device *isp)
 {
 	int r;
 	unsigned long rate;
-
+	printk("isp enable clocks\n");
 	r = clk_prepare_enable(isp->clock[ISP_CLK_CAM_ICK]);
 	if (r) {
 		dev_err(isp->dev, "failed to enable cam_ick clock\n");
@@ -1340,6 +1342,7 @@ static int isp_enable_clocks(struct isp_device *isp)
 		dev_err(isp->dev, "failed to enable csi2_fck clock\n");
 		goto out_clk_enable_csi2_fclk;
 	}
+	printk("isp enable clocks success\n");
 	return 0;
 
 out_clk_enable_csi2_fclk:
@@ -1347,6 +1350,7 @@ out_clk_enable_csi2_fclk:
 out_clk_enable_mclk:
 	clk_disable_unprepare(isp->clock[ISP_CLK_CAM_ICK]);
 out_clk_enable_ick:
+	printk("isp enable clocks, problems\n");
 	return r;
 }
 
@@ -1356,6 +1360,7 @@ out_clk_enable_ick:
  */
 static void isp_disable_clocks(struct isp_device *isp)
 {
+	printk("isp disable clocks\n");
 	clk_disable_unprepare(isp->clock[ISP_CLK_CAM_ICK]);
 	clk_disable_unprepare(isp->clock[ISP_CLK_CAM_MCLK]);
 	clk_disable_unprepare(isp->clock[ISP_CLK_CSI2_FCK]);
@@ -1402,10 +1407,11 @@ static struct isp_device *__omap3isp_get(struct isp_device *isp, bool irq)
 
 	if (isp == NULL)
 		return NULL;
-
 	mutex_lock(&isp->isp_mutex);
+printk("enabling omap3isp %d\n", isp->ref_count);
 	if (isp->ref_count > 0)
 		goto out;
+printk("enabling omap3isp\n");
 
 	if (isp_enable_clocks(isp) < 0) {
 		__isp = NULL;
@@ -1452,8 +1458,10 @@ static void __omap3isp_put(struct isp_device *isp, bool save_ctx)
 		return;
 
 	mutex_lock(&isp->isp_mutex);
+printk("disabling omap3isp %d\n", isp->ref_count);
 	BUG_ON(isp->ref_count == 0);
 	if (--isp->ref_count == 0) {
+printk("disabling omap3isp\n");
 		isp_disable_interrupts(isp);
 		if (save_ctx) {
 			isp_save_ctx(isp);
