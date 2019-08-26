@@ -782,6 +782,10 @@ static void musb_handle_intr_connect(struct musb *musb, u8 devctl, u8 int_usb)
 		} else
 			musb_dbg(musb, "CONNECT as b_peripheral???");
 		break;
+	case OTG_STATE_B_IDLE:
+		musb_dbg(musb, "IDLE -> HOST: %x", devctl);
+		goto b_host;
+		break;
 	case OTG_STATE_B_WAIT_ACON:
 		musb_dbg(musb, "HNP: CONNECT, now b_host");
 b_host:
