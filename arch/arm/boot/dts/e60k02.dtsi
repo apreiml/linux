@@ -1,0 +1,339 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright 2019 Andreas Kemnade
+ * based on works
+ * Copyright 2016 Freescale Semiconductor, Inc.
+ * and
+ * Copyright (C) 2014 Ricoh Electronic Devices Co., Ltd
+ *
+ * Netronix E60K02 board common.
+ * This board is equipped with different SoCs and
+ * found in ebook-readers like the Kobo Clara HD (with i.MX6SLL) and
+ * the Tolino Shine 3 (with i.MX6SL)
+ */
+
+/ {
+
+	memory {
+		reg = <0x80000000 0x80000000>;
+	};
+
+	chosen {
+		stdout-path = &uart1;
+	};
+
+	wifi_pwrseq: wifi_pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		post-power-on-delay-ms = <20>;
+		reset-gpios = <&gpio5 0 GPIO_ACTIVE_LOW>;
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_sd3_vmmc: wifi_regulator {
+			compatible = "regulator-fixed";
+			regulator-name = "SD3_SPWR";
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+
+			gpio = <&gpio4 29 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_led>;
+
+		GLED {
+			gpios = <&gpio5 7 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "timer";
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+		power {
+			label = "Power";
+			gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			gpio-key,wakeup;
+		};
+		cover {
+			label = "Cover";
+			gpios = <&gpio5 12 GPIO_ACTIVE_LOW>;
+			linux,code = <SW_LID>;
+			linux,input-type = <0x05>;    /* EV_SW */
+			gpio-key,wakeup;
+		};
+	};
+
+};
+
+
+
+&audmux {
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+&snvs_rtc {
+	status = "disabled";
+};
+
+&i2c1 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default","sleep";
+	pinctrl-0 = <&pinctrl_i2c1 &pinctrl_lm3630a_bl_gpio>;
+	pinctrl-1 = <&pinctrl_i2c1_sleep>;
+	status = "okay";
+
+	lm3630a: lm3630a-i2c@36 {
+		reg = <0x36>;
+		status = "ok";
+
+		compatible = "ti,lm3630a";
+		enable-gpios = <&gpio2 10 0>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		led@0 {
+			reg = <0>;
+			led-sources = <0>;
+			label = "backlight_warm";
+			default-brightness = <0>;
+			max-brightness = <255>;
+		};
+
+		led@1 {
+			reg = <1>;
+			led-sources = <1>;
+			label = "backlight_cold";
+			default-brightness = <0>;
+			max-brightness = <255>;
+		};
+
+	};
+};
+
+&i2c3 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c3 &pinctrl_ricoh_gpio>;
+	status = "okay";
+
+	ricoh619: ricoh619-i2c@32 {
+		compatible = "ricoh,rc5t619";
+		reg = <0x32>;
+
+		system-power-controller;
+		gpios = <&gpio5 11 GPIO_ACTIVE_LOW>;
+		gpio_chg = <&gpio5 15 GPIO_ACTIVE_LOW>;
+		gpio_bat_low = <&gpio3 28 GPIO_ACTIVE_LOW>;
+	};
+
+};
+
+&ricoh619
+{
+	compatible = "ricoh,rc5t619";
+
+	regulators {
+		ricoh619_dcdc1_reg: DCDC1 {
+			regulator-name = "DCDC1";
+			regulator-min-microvolt = <300000>;
+			regulator-max-microvolt = <1875000>;
+			regulator-always-on;
+			regulator-boot-on;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <900000>;
+			};
+		};
+
+		/* Core3_3V3 */
+		ricoh619_dcdc2_reg: DCDC2 {
+			regulator-name = "DCDC2";
+			regulator-always-on;
+			regulator-boot-on;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <3300000>;
+			};
+		};
+
+		ricoh619_dcdc3_reg: DCDC3 {
+			regulator-name = "DCDC3";
+			regulator-min-microvolt = <300000>;
+			regulator-max-microvolt = <1875000>;
+			regulator-always-on;//
+			regulator-boot-on;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <1140000>;
+			};
+		};
+
+		/* Core4_1V2 */
+		ricoh619_dcdc4_reg: DCDC4 {
+			regulator-name = "DCDC4";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-always-on;
+			regulator-boot-on;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <1140000>;
+			};
+		};
+
+		/* Core4_1V8 */
+		ricoh619_dcdc5_reg: DCDC5 {
+			regulator-name = "DCDC5";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+			regulator-boot-on;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <1700000>;
+			};
+		};
+
+		/* IR_3V3 */
+		ricoh619_ldo1_reg: LDO1  {
+			regulator-name = "LDO1";
+			//regulator-always-on;
+			regulator-boot-on;
+		};
+
+		/* Core1_3V3 */
+		ricoh619_ldo2_reg: LDO2  {
+			regulator-name = "LDO2";
+			regulator-always-on;
+			regulator-boot-on;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <3000000>;
+			};
+		};
+
+		/* Core5_1V2 */
+		ricoh619_ldo3_reg: LDO3  {
+			regulator-name = "LDO3";
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
+		ricoh619_ldo4_reg: LDO4 {
+			regulator-name = "LDO4";
+			regulator-boot-on;
+		};
+
+		/* SPD_3V3 */
+		ricoh619_ldo5_reg: LDO5 {
+			regulator-name = "LDO5";
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
+		/* DDR_0V6 */
+		ricoh619_ldo6_reg: LDO6 {
+			regulator-name = "LDO6";
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
+		/* VDD_PWM */
+		ricoh619_ldo7_reg: LDO7 {
+			regulator-name = "LDO7";
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
+		/* ldo_1v8 */
+		ricoh619_ldo8_reg: LDO8 {
+			regulator-name = "LDO8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
+		ricoh619_ldo9_reg: LDO9 {
+			regulator-name = "LDO9";
+			regulator-boot-on;
+		};
+
+		ricoh619_ldo10_reg: LDO10 {
+			regulator-name = "LDO10";
+			regulator-boot-on;
+		};
+
+		ricoh619_ldortc1_reg: LDORTC1  {
+			regulator-name = "LDORTC1";
+			regulator-boot-on;
+		};
+
+		ricoh619_ldortc2_reg: LDORTC2 {
+			regulator-name = "LDORTC2";
+			regulator-boot-on;
+		};
+	};
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart1>;
+	status = "okay";
+};
+
+&usdhc1 {
+	status = "disabled";
+};
+
+&usdhc2 {
+	pinctrl-names = "default", "state_100mhz", "state_200mhz","sleep";
+	pinctrl-0 = <&pinctrl_usdhc2>;
+	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
+	pinctrl-3 = <&pinctrl_usdhc2_sleep>;
+	non-removable;
+	status = "okay";
+};
+
+&usdhc3 {
+	pinctrl-names = "default", "state_100mhz", "state_200mhz","sleep";
+	pinctrl-0 = <&pinctrl_usdhc3>, <&pinctrl_usdhc3_pwr>;
+	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
+	pinctrl-3 = <&pinctrl_usdhc3_sleep>, <&pinctrl_usdhc3_pwr>;
+	vmmc-supply = <&reg_sd3_vmmc>;
+	mmc-pwrseq = <&wifi_pwrseq>;
+	cap-power-off-card;
+	non-removable;
+	status = "okay";
+};
+
+&usbotg1 {
+	pinctrl-names = "default";
+	disable-over-current;
+	srp-disable;
+	hnp-disable;
+	adp-disable;
+	status = "okay";
+};
+
+
+&ssi2 {
+	status = "disabled";
+};
+
