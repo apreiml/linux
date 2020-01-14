@@ -31,7 +31,7 @@ struct rn5t618_channel_ratios {
 
 static const struct rn5t618_channel_ratios rn5t618_ratios[8] =
 {
-	{1, 1}, /* LIMMON, tbd */
+	{50, 32}, /* LIMMON measured across 20mOhm, amplified by 32 */
 	{2, 1}, /* VBAT */
 	{3, 1}, /* VADP */
 	{3, 1}, /* VUSB */
