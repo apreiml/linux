@@ -19,6 +19,18 @@
 
 #define REFERENCE_VOLT 2500
 
+/* mask for selecting channels for single conversion */
+#define ADCCNT3_CHANNEL_MASK 0x7
+/* average 4-time conversion mode */
+#define ADCCNT3_AVG BIT(3)
+/* set for starting a single conversion, gets cleared by hw when done */
+#define ADCCNT3_GODONE BIT(4)
+/* automatic conversion, period is in ADCCNT2, selected channels are
+ * in ADCCNT1
+ */
+#define ADCCNT3_AUTO BIT(5)
+#define ADCEND_IRQ BIT(0)
+
 struct rn5t618_adc_data {
 	struct device *dev;
 	struct rn5t618 *rn5t618;
