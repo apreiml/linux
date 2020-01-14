@@ -8,15 +8,19 @@
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/errno.h>
+#include <linux/interrupt.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/mfd/rn5t618.h>
 #include <linux/platform_device.h>
+#include <linux/completion.h>
 #include <linux/regmap.h>
 #include <linux/iio/iio.h>
 #include <linux/slab.h>
 #include <linux/irqdomain.h>
 
+
+#define RN5T618_ADC_CONVERSION_TIMEOUT   (msecs_to_jiffies(500))
 #define REFERENCE_VOLT 2500
 
 /* mask for selecting channels for single conversion */
@@ -34,6 +38,8 @@
 struct rn5t618_adc_data {
 	struct device *dev;
 	struct rn5t618 *rn5t618;
+	struct completion conv_completion;
+	int irq;
 };
 
 struct rn5t618_channel_ratios {
@@ -75,6 +81,28 @@ static int rn5t618_read_adc_reg(struct rn5t618 *rn5t618, int reg, u16 *val)
 	return 0;
 }
 
+static irqreturn_t rn5t618_adc_irq(int irq, void *data)
+{
+	struct rn5t618_adc_data *adc = data;
+	unsigned int r = 0;
+	int ret;
+
+	/* clear low & high treshold irqs */
+	regmap_write(adc->rn5t618->regmap, RN5T618_IR_ADC1, 0);
+	regmap_write(adc->rn5t618->regmap, RN5T618_IR_ADC2, 0);
+
+	ret = regmap_read(adc->rn5t618->regmap, RN5T618_IR_ADC3, &r);
+	if (ret < 0)
+		dev_err(adc->dev, "failed to read IRQ status: %d\n", ret);
+
+	regmap_write(adc->rn5t618->regmap, RN5T618_IR_ADC3, 0);
+
+	if (r & ADCEND_IRQ)
+		complete(&adc->conv_completion);
+
+	return IRQ_HANDLED;
+}
+
 static int rn5t618_adc_read(struct iio_dev *iio_dev,
 			    const struct iio_chan_spec *chan,
 			    int *val, int *val2, long mask)
@@ -83,17 +111,42 @@ static int rn5t618_adc_read(struct iio_dev *iio_dev,
 	u16 raw;
 	int ret;
 
+	/* select channel */
+	ret = regmap_update_bits(adc->rn5t618->regmap, RN5T618_ADCCNT3, ADCCNT3_CHANNEL_MASK,
+				 chan->channel);
+	if (ret < 0)
+		return ret;
+
+	ret = regmap_write(adc->rn5t618->regmap, RN5T618_EN_ADCIR3, ADCEND_IRQ);
+	if (ret < 0)
+		return ret;
+
+	ret = regmap_update_bits(adc->rn5t618->regmap, RN5T618_ADCCNT3, ADCCNT3_AVG,
+				 mask == IIO_CHAN_INFO_AVERAGE_RAW ? ADCCNT3_AVG : 0);
+	if (ret < 0)
+		return ret;
+
+	init_completion(&adc->conv_completion);
+	/* single conversion */
+	ret = regmap_update_bits(adc->rn5t618->regmap, RN5T618_ADCCNT3, ADCCNT3_GODONE, ADCCNT3_GODONE);
+	if (ret < 0)
+		return ret;
+
+	ret = wait_for_completion_timeout(&adc->conv_completion,
+					    RN5T618_ADC_CONVERSION_TIMEOUT);
+	if (ret == 0) {
+		dev_warn(adc->dev, "timeout waiting for adc result\n");
+		return -ETIMEDOUT;
+	}
+
 	ret = rn5t618_read_adc_reg(adc->rn5t618, RN5T618_ILIMDATAH + 2 * chan->channel, &raw);
 	if (ret < 0)
 		return ret;
 
 	*val = raw;
-	if (mask == IIO_CHAN_INFO_PROCESSED) {
-		*val = *val * REFERENCE_VOLT * rn5t618_ratios[chan->channel].numerator / rn5t618_ratios[chan->channel].denominator / 4095; 
-		/* uV/uA */
-		*val *= 1000;
-	}
-
+	if (mask == IIO_CHAN_INFO_PROCESSED)
+		*val = *val * REFERENCE_VOLT * rn5t618_ratios[chan->channel].numerator /
+			rn5t618_ratios[chan->channel].denominator / 4095;
 
 	return IIO_VAL_INT;
 }
@@ -138,7 +191,19 @@ static int rn5t618_adc_probe(struct platform_device *pdev)
 
 	adc = iio_priv(iio_dev);
 	adc->dev = &pdev->dev;
-	adc->rn5t618 = rn5t618; 
+	adc->rn5t618 = rn5t618;
+        adc->irq = -ENOENT;
+
+        if (rn5t618->irq_data)
+		adc->irq = regmap_irq_get_virq(rn5t618->irq_data,
+					       RN5T618_IRQ_ADC);
+
+	if (adc->irq  < 0) {
+		dev_err(&pdev->dev, "get virq failed\n");
+		return adc->irq;
+	}
+
+	init_completion(&adc->conv_completion);
 
 	iio_dev->name = dev_name(&pdev->dev);
 	iio_dev->dev.parent = &pdev->dev;
@@ -147,28 +212,26 @@ static int rn5t618_adc_probe(struct platform_device *pdev)
 	iio_dev->channels = rn5t618_adc_iio_channels;
 	iio_dev->num_channels = ARRAY_SIZE(rn5t618_adc_iio_channels);
 
-	/* stop */
+	/* stop any auto-conversion */
 	ret = regmap_write(rn5t618->regmap, RN5T618_ADCCNT3, 0);
-	if (ret < 0)
-		return ret;
-
-	ret = regmap_write(rn5t618->regmap, RN5T618_ADCCNT2, 0);
-	if (ret < 0)
-		return ret;
-
-	/* select all channels */
-	ret = regmap_write(rn5t618->regmap, RN5T618_ADCCNT1, 0xff);
-	if (ret < 0)
-		return ret;
-
-	/* periodic start */
-	ret = regmap_write(rn5t618->regmap, RN5T618_ADCCNT3, 0x28);
 	if (ret < 0)
 		return ret;
 
 	platform_set_drvdata(pdev, iio_dev);
 
+	ret = request_threaded_irq(adc->irq, NULL,
+				   rn5t618_adc_irq,
+				   IRQF_ONESHOT, dev_name(adc->dev),
+				   adc);
+	if (ret < 0) {
+		dev_err(adc->dev, "request irq %d failed: %d\n", adc->irq, ret);
+		return ret;
+	}
+
 	ret = iio_device_register(iio_dev);
+	if (ret < 0)
+		free_irq(adc->irq, adc);
+
 	return ret;
 }
 
@@ -178,6 +241,7 @@ static int rn5t618_adc_remove(struct platform_device *pdev)
 	struct rn5t618_adc_data *adc = iio_priv(iio_dev);
 
 	iio_device_unregister(iio_dev);
+	free_irq(adc->irq, adc);
 
 	return 0;
 }
