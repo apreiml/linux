@@ -495,6 +495,41 @@ static int epdc_working_buffer_update(struct mxc_epdc_fb_data *fb_data,
 				      struct mxcfb_rect *update_region);
 extern void pxp_get_collision_info(struct pxp_collision_info *info);
 
+static unsigned mxc_epdc_fb_fetch_wxi_data(uint8_t *xwi_buffer, char *outbuf)
+{
+	unsigned l = xwi_buffer[0];
+	if (outbuf) {
+		u8 chk = 0;
+		unsigned i;
+
+		for (i = 0; i <= l; i++)
+			chk += xwi_buffer[i];
+
+		if (chk != xwi_buffer[i])
+			return 0;
+
+		memcpy(outbuf, xwi_buffer + 1, l);
+	}
+
+	return l;
+}
+
+static int mxc_epdc_fb_fetch_vc_data( u8 *vcd_buffer, u32 waveform_mode, u32 waveform_tempRange, u32 mc, u32 trc, u8 *vcd)
+{
+	u8 *vcd_src = vcd_buffer + 16 * (waveform_mode * trc + waveform_tempRange);
+	int i;
+	u8 chk = 0;
+	for(i = 0 ; i < 15; i++)
+		chk += vcd_src[i];
+
+	if (chk != vcd_src[i])
+		return -EINVAL;
+
+	memcpy(vcd, vcd_src, 16);
+	return 0;
+}
+
+
 #ifdef DEBUG
 static void dump_pxp_config(struct mxc_epdc_fb_data *fb_data,
 			    struct pxp_config_data *pxp_conf)
