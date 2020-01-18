@@ -164,6 +164,7 @@ struct mxc_epdc_fb_data {
 	struct regulator *display_regulator;
 	struct regulator *vcom_regulator;
 	struct regulator *v3p3_regulator;
+	bool v3p3_fixed ;
 	bool fw_default_load;
 	int rev;
 
@@ -1448,6 +1449,9 @@ static void epdc_powerup(struct mxc_epdc_fb_data *fb_data)
 		mutex_unlock(&fb_data->power_mutex);
 		return;
 	}
+	if(!regulator_is_enabled(fb_data->v3p3_regulator)) {
+		fb_data->v3p3_fixed = 1;
+	}
 
 	msleep(1);
 
@@ -1508,6 +1512,9 @@ static void epdc_powerdown(struct mxc_epdc_fb_data *fb_data)
 
 	/* turn off the V3p3 */
 	regulator_disable(fb_data->v3p3_regulator);
+	if(regulator_is_enabled(fb_data->v3p3_regulator)) {
+		fb_data->v3p3_fixed = 1;
+	}
 
 	fb_data->power_state = POWER_STATE_OFF;
 	fb_data->powering_down = false;
@@ -5776,7 +5783,8 @@ static void mxc_epdc_fb_shutdown(struct platform_device *pdev)
 	clk_disable_unprepare(fb_data->epdc_clk_axi);
 
 	/* turn off the V3p3 */
-	if (regulator_is_enabled(fb_data->v3p3_regulator))
+	if ( !fb_data->v3p3_fixed && regulator_is_enabled(fb_data->v3p3_regulator)) {
+		dev_dbg(fb_data->dev, "EPDC V3P3 regulator disabling ...\n");
 		regulator_disable(fb_data->v3p3_regulator);
 }
 
