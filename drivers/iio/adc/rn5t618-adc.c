@@ -46,7 +46,7 @@ struct rn5t618_channel_ratios {
 	u16 denominator;
 };
 
-enum rn5t618_channels = {
+enum rn5t618_channels {
 	LIMMON = 0,
 	VBAT,
 	VADP,
@@ -73,7 +73,7 @@ static int rn5t618_read_adc_reg(struct rn5t618 *rn5t618, int reg, u16 *val)
 	u8 data[2];
 	int ret;
 
-	ret = regmap_read(rn5t618->regmap, reg, data, sizeof(data));
+	ret = regmap_bulk_read(rn5t618->regmap, reg, data, sizeof(data));
 	if (ret < 0)
 		return ret;
 
@@ -226,7 +226,7 @@ static int rn5t618_adc_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, iio_dev);
 
-	ret = request_threaded_irq(adc->irq, NULL,
+	ret = devm_request_threaded_irq(adc->dev, adc->irq, NULL,
 				   rn5t618_adc_irq,
 				   IRQF_ONESHOT, dev_name(adc->dev),
 				   adc);
@@ -235,22 +235,9 @@ static int rn5t618_adc_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = iio_device_register(iio_dev);
-	if (ret < 0)
-		free_irq(adc->irq, adc);
+	ret = devm_iio_device_register(adc->dev, iio_dev);
 
 	return ret;
-}
-
-static int rn5t618_adc_remove(struct platform_device *pdev)
-{
-	struct iio_dev *iio_dev = platform_get_drvdata(pdev);
-	struct rn5t618_adc_data *adc = iio_priv(iio_dev);
-
-	iio_device_unregister(iio_dev);
-	free_irq(adc->irq, adc);
-
-	return 0;
 }
 
 static struct platform_driver rn5t618_adc_driver = {
@@ -258,7 +245,6 @@ static struct platform_driver rn5t618_adc_driver = {
 		.name   = "rn5t618-adc",
 	},
 	.probe = rn5t618_adc_probe,
-	.remove = rn5t618_adc_remove,
 };
 
 module_platform_driver(rn5t618_adc_driver);
