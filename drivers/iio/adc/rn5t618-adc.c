@@ -70,22 +70,14 @@ static const struct rn5t618_channel_ratios rn5t618_ratios[8] = {
 
 static int rn5t618_read_adc_reg(struct rn5t618 *rn5t618, int reg, u16 *val)
 {
-	unsigned int h;
-	unsigned int l;
+	u8 data[2];
 	int ret;
 
-	ret = regmap_read(rn5t618->regmap, reg, &h);
+	ret = regmap_read(rn5t618->regmap, reg, data, sizeof(data));
 	if (ret < 0)
 		return ret;
 
-	ret = regmap_read(rn5t618->regmap, reg + 1, &l);
-	if (ret < 0)
-		return ret;
-
-	h <<= 4;
-	h |= (l & 0xF);
-	h &= 0xFFF;
-	*val = h;
+	*val = (data[0] << 4) | (data[1] & 0xF);
 
 	return 0;
 }
