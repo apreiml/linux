@@ -200,13 +200,12 @@ static int rn5t618_adc_probe(struct platform_device *pdev)
 	adc = iio_priv(iio_dev);
 	adc->dev = &pdev->dev;
 	adc->rn5t618 = rn5t618;
-	adc->irq = -ENOENT;
 
 	if (rn5t618->irq_data)
 		adc->irq = regmap_irq_get_virq(rn5t618->irq_data,
 					       RN5T618_IRQ_ADC);
 
-	if (adc->irq  < 0) {
+	if (adc->irq <= 0) {
 		dev_err(&pdev->dev, "get virq failed\n");
 		return adc->irq;
 	}
@@ -266,4 +265,3 @@ module_platform_driver(rn5t618_adc_driver);
 MODULE_ALIAS("platform:rn5t618-adc");
 MODULE_DESCRIPTION("RICOH RN5T618 ADC driver");
 MODULE_LICENSE("GPL");
-
