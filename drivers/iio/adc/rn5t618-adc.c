@@ -46,15 +46,26 @@ struct rn5t618_channel_ratios {
 	u16 denominator;
 };
 
+enum rn5t618_channels = {
+	LIMMON = 0,
+	VBAT,
+	VADP,
+	VUSB,
+	VSYS,
+	VTHM,
+	AIN1,
+	AIN0
+};
+
 static const struct rn5t618_channel_ratios rn5t618_ratios[8] = {
-	{50, 32}, /* LIMMON measured across 20mOhm, amplified by 32 */
-	{2, 1}, /* VBAT */
-	{3, 1}, /* VADP */
-	{3, 1}, /* VUSB */
-	{3, 1}, /* VSYS */
-	{1, 1}, /* VTHM */
-	{1, 1}, /* AIN1 */
-	{1, 1}, /* AIN0 */
+	[LIMMON] = {50, 32}, /* measured across 20mOhm, amplified by 32 */
+	[VBAT] = {2, 1},
+	[VADP] = {3, 1},
+	[VUSB] = {3, 1},
+	[VSYS] = {3, 1},
+	[VTHM] = {1, 1},
+	[AIN1] = {1, 1},
+	[AIN0] = {1, 1},
 };
 
 static int rn5t618_read_adc_reg(struct rn5t618 *rn5t618, int reg, u16 *val)
@@ -171,14 +182,14 @@ static const struct iio_info rn5t618_adc_iio_info = {
 }
 
 static const struct iio_chan_spec rn5t618_adc_iio_channels[] = {
-	RN5T618_ADC_CHANNEL(0, IIO_CURRENT, "LIMMON"),
-	RN5T618_ADC_CHANNEL(1, IIO_VOLTAGE, "VBAT"),
-	RN5T618_ADC_CHANNEL(2, IIO_VOLTAGE, "VADP"),
-	RN5T618_ADC_CHANNEL(3, IIO_VOLTAGE, "VUSB"),
-	RN5T618_ADC_CHANNEL(4, IIO_VOLTAGE, "VSYS"),
-	RN5T618_ADC_CHANNEL(5, IIO_VOLTAGE, "VTHM"),
-	RN5T618_ADC_CHANNEL(6, IIO_VOLTAGE, "AIN1"),
-	RN5T618_ADC_CHANNEL(7, IIO_VOLTAGE, "AIN0")
+	RN5T618_ADC_CHANNEL(LIMMON, IIO_CURRENT, "LIMMON"),
+	RN5T618_ADC_CHANNEL(VBAT, IIO_VOLTAGE, "VBAT"),
+	RN5T618_ADC_CHANNEL(VADP, IIO_VOLTAGE, "VADP"),
+	RN5T618_ADC_CHANNEL(VUSB, IIO_VOLTAGE, "VUSB"),
+	RN5T618_ADC_CHANNEL(VSYS, IIO_VOLTAGE, "VSYS"),
+	RN5T618_ADC_CHANNEL(VTHM, IIO_VOLTAGE, "VTHM"),
+	RN5T618_ADC_CHANNEL(AIN1, IIO_VOLTAGE, "AIN1"),
+	RN5T618_ADC_CHANNEL(AIN0, IIO_VOLTAGE, "AIN0")
 };
 
 static int rn5t618_adc_probe(struct platform_device *pdev)
