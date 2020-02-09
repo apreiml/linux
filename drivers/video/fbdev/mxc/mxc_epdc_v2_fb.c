@@ -102,6 +102,8 @@
 #define MERGE_FAIL	1
 #define MERGE_BLOCK	2
 
+//#define EPD_SUSPEND_BLANK			1
+
 static u64 used_luts = 0x1;	/* do not use LUT0 */
 static unsigned long default_bpp = 16;
 
@@ -6523,14 +6525,16 @@ static int mxc_epdc_fb_remove(struct platform_device *pdev)
 static int mxc_epdc_fb_suspend(struct device *dev)
 {
 	struct mxc_epdc_fb_data *data = dev_get_drvdata(dev);
-	int ret;
+	int ret = 0;
 
-	data->pwrdown_delay = FB_POWERDOWN_DISABLE;
+#ifdef EPD_SUSPEND_BLANK//[
+	
+	//data->pwrdown_delay = FB_POWERDOWN_DISABLE;
 	ret = mxc_epdc_fb_blank(FB_BLANK_POWERDOWN, &data->info);
 
 	if (ret)
 		goto out;
-
+#endif //]EPD_SUSPEND_BLANK
 out:
 	pinctrl_pm_select_sleep_state(dev);
 
@@ -6542,8 +6546,9 @@ static int mxc_epdc_fb_resume(struct device *dev)
 	struct mxc_epdc_fb_data *data = dev_get_drvdata(dev);
 
 	pinctrl_pm_select_default_state(dev);
-
+#ifdef EPD_SUSPEND_BLANK//[
 	mxc_epdc_fb_blank(FB_BLANK_UNBLANK, &data->info);
+#endif //]EPD_SUSPEND_BLANK
 	epdc_init_settings(data);
 	data->updates_active = false;
 
