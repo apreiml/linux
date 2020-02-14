@@ -266,6 +266,7 @@ struct mxc_epdc_fb_data {
 	u8 req_gpr;
 	u8 req_bit;
 	u32 dwSafeTicksEP3V3; // the safe ticks we must to wait for EP3V3 .
+	u32 dwJiffies_To_TurnOFF_EP3V3;// the jiffies value if >= this value , we can turn off the EP3V3 .
 
 	/* FB elements related to gen2 waveform data */
 	u8 *waveform_vcd_buffer;
@@ -2193,7 +2194,7 @@ static void epdc_powerdown(struct mxc_epdc_fb_data *fb_data)
 		fb_data->wait_for_powerdown = false;
 		complete(&fb_data->powerdown_compl);
 	}
-
+	fb_data->dwJiffies_To_TurnOFF_EP3V3 = jiffies + fb_data->dwSafeTicksEP3V3;
 	mutex_unlock(&fb_data->power_mutex);
 }
 
@@ -5926,6 +5927,13 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 	fb_data->cur_mode = &fb_data->pdata->epdc_mode[0];
 #endif
 
+	if (!of_property_read_u32(np, "safe-ticks-turnoff-ep3v3", &dwSafeTicksTurnoffEP3V3))
+	{
+		// safe-ticks-turnoff-ep3v3 property .
+		fb_data->dwSafeTicksEP3V3 = dwSafeTicksTurnoffEP3V3;
+	}
+	fb_data->dwJiffies_To_TurnOFF_EP3V3 = jiffies;
+
 	if (panel_str)
 		for (i = 0; i < fb_data->pdata->num_modes; i++)
 			if (!strcmp(fb_data->pdata->epdc_mode[i].vmode->name,
@@ -6660,6 +6668,7 @@ static const struct dev_pm_ops mxc_epdc_fb_pm_ops = {
 static void mxc_epdc_fb_shutdown(struct platform_device *pdev)
 {
 	struct mxc_epdc_fb_data *fb_data = platform_get_drvdata(pdev);
+	volatile unsigned long tickNow;
 
 	/* Disable power to the EPD panel */
 	if (regulator_is_enabled(fb_data->vcom_regulator))
@@ -6678,6 +6687,24 @@ static void mxc_epdc_fb_shutdown(struct platform_device *pdev)
 	if ( !fb_data->v3p3_fixed && regulator_is_enabled(fb_data->v3p3_regulator)) {
 		dev_dbg(fb_data->dev, "EPDC V3P3 regulator disabling ...\n");
 		regulator_disable(fb_data->v3p3_regulator);
+	}
+
+#if 1
+	while (1) {
+		tickNow = jiffies;
+		if(time_before(tickNow,fb_data->dwJiffies_To_TurnOFF_EP3V3)) {
+			dev_warn(fb_data->dev,"waiting for VEE stable %d->%d,to turn off EP3V3 !!!\n",(int)tickNow,(int)fb_data->dwJiffies_To_TurnOFF_EP3V3);
+			msleep(500);
+		}
+		else {
+			dev_info(fb_data->dev,"wait VEE stable ok .\n");
+			break;
+		}
+	}
+#endif
+
+
+	return 0;
 }
 
 static struct platform_driver mxc_epdc_fb_driver = {
