@@ -6934,6 +6934,14 @@ static int mxc_epdc_fb_suspend(struct device *dev)
 	struct mxc_epdc_fb_data *data = dev_get_drvdata(dev);
 	int ret = 0;
 
+
+	if (POWER_STATE_OFF != data->power_state)
+	{
+		dev_warn(dev,"%s() : waiting for EPD power down ,current state=%d...\n",
+			__FUNCTION__,data->power_state);
+		return -1;
+	}
+
 #ifdef EPD_SUSPEND_BLANK//[
 	
 	//data->pwrdown_delay = FB_POWERDOWN_DISABLE;
@@ -6997,6 +7005,13 @@ static void mxc_epdc_fb_shutdown(struct platform_device *pdev)
 {
 	struct mxc_epdc_fb_data *fb_data = platform_get_drvdata(pdev);
 	volatile unsigned long tickNow;
+
+	while (POWER_STATE_OFF != fb_data->power_state)
+	{
+		dev_warn(fb_data->dev,"waiting for EPD power down ,current state=%d...\n",
+				fb_data->power_state);
+		msleep(100);
+	}
 
 	/* Disable power to the EPD panel */
 	if (regulator_is_enabled(fb_data->vcom_regulator))
