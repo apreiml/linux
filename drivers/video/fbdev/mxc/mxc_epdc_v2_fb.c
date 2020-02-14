@@ -69,6 +69,9 @@
 	#define VDROP_PROC_IN_KERNEL		1
 #endif //] defined(TPS65185_VDROP_PROC_IN_KERNEL)
 
+#define ADJ_COLLISION_REGION_PATCH		1
+#define DITHER_GC16_COLLISION_PATCH		1
+
 #define EPDC_STANDARD_MODE
 
 #define USE_PS_AS_OUTPUT
@@ -5162,10 +5165,35 @@ static void epdc_intr_work_func(struct work_struct *work)
 						fb_data->epdc_fb_var.yres, fb_data->epdc_fb_var.rotate,
 						cur_upd_rect, &adj_update_region);
 
-					coll_region.left = fb_data->col_info.rect_min_x + adj_update_region.left;
-					coll_region.top  = fb_data->col_info.rect_min_y + adj_update_region.top;
-					coll_region.width  = fb_data->col_info.rect_max_x - fb_data->col_info.rect_min_x + 1;
-					coll_region.height = fb_data->col_info.rect_max_y - fb_data->col_info.rect_min_y + 1;
+
+#if (ADJ_COLLISION_REGION_PATCH==1) //[
+					if ( ((fb_data->wv_modes.mode_aa!=fb_data->wv_modes.mode_gl16)&&(fb_data->cur_update->update_desc->upd_data.waveform_mode == fb_data->wv_modes.mode_aa)) || \
+							((fb_data->wv_modes.mode_aad!=fb_data->wv_modes.mode_gc16)&&(fb_data->cur_update->update_desc->upd_data.waveform_mode == fb_data->wv_modes.mode_aad))
+						)
+					{
+						coll_region.left = adj_update_region.left;
+						coll_region.top  = adj_update_region.top;
+						coll_region.width  = adj_update_region.width;
+						coll_region.height = adj_update_region.height;
+					}
+					else 
+#endif //] ADJ_COLLISION_REGION_PATCH
+#if (DITHER_GC16_COLLISION_PATCH==1) //[
+					if(fb_data->cur_update->update_desc->upd_data.dither_mode) 
+					{
+						coll_region.left = adj_update_region.left;
+						coll_region.top  = adj_update_region.top;
+						coll_region.width  = adj_update_region.width;
+						coll_region.height = adj_update_region.height;
+					}
+					else
+#endif //]DITHER_GC16_COLLISION_PATCH
+					{
+						coll_region.left = fb_data->col_info.rect_min_x + adj_update_region.left;
+						coll_region.top  = fb_data->col_info.rect_min_y + adj_update_region.top;
+						coll_region.width  = fb_data->col_info.rect_max_x - fb_data->col_info.rect_min_x + 1;
+						coll_region.height = fb_data->col_info.rect_max_y - fb_data->col_info.rect_min_y + 1;
+					}
 					memset(&fb_data->col_info, 0x0, sizeof(struct pxp_collision_info));
 				} else {
 				/* Get collision region coords from EPDC */
