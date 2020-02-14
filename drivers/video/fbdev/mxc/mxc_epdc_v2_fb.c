@@ -80,7 +80,7 @@
  * Enable this define to have a default panel
  * loaded during driver initialization
  */
-/*#define DEFAULT_PANEL_HW_INIT*/
+#define DEFAULT_PANEL_HW_INIT
 
 #define SG_NUM				14 /* 2+4+4+4  */
 #define NUM_SCREENS_MIN	2
@@ -6266,6 +6266,7 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, fb_data);
 	info = &fb_data->info;
+	info->par = fb_data;
 
 	/* Allocate color map for the FB */
 	ret = fb_alloc_cmap(&info->cmap, 256, 0);
@@ -6798,7 +6799,7 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 	fb_data->powering_down = false;
 	fb_data->wait_for_powerdown = false;
 	fb_data->updates_active = false;
-	fb_data->pwrdown_delay = 0;
+	fb_data->pwrdown_delay = 20;
 
 	/* Register FB */
 	ret = register_framebuffer(info);
