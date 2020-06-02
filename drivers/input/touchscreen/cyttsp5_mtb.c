@@ -42,6 +42,10 @@ static void cyttsp5_final_sync(struct input_dev *input, int max_slots,
 		input_mt_report_slot_state(input, MT_TOOL_FINGER, false);
 	}
 
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_EMULATION
+	input_mt_report_pointer_emulation(input, false);
+#endif
+
 	input_sync(input);
 }
 
@@ -74,11 +78,8 @@ static void cyttsp5_report_slot_liftoff(struct cyttsp5_mt_data *md,
 
 static int cyttsp5_input_register_device(struct input_dev *input, int max_slots)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0))
-	input_mt_init_slots(input, max_slots, 0);
-#else
-	input_mt_init_slots(input, max_slots);
-#endif
+	input_mt_init_slots(input, max_slots, INPUT_MT_DIRECT);
+
 	return input_register_device(input);
 }
 
