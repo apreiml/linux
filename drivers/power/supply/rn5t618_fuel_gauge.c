@@ -38,6 +38,7 @@ struct rn5t618_charger_info {
 	struct platform_device *pdev;
 	struct power_supply *gauge;
 	struct power_supply *usb;
+	struct power_supply *adp;
 	int irq;
 };
 
@@ -47,6 +48,14 @@ static enum power_supply_property rn5t618_usb_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_ONLINE,
 };
+
+static enum power_supply_property rn5t618_adp_props[] = {
+	/* input current limit is not very accurate */
+	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT,
+	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_ONLINE,
+};
+
 
 static enum power_supply_property rn5t618_gauge_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -305,6 +314,82 @@ static void rn5t618_gauge_external_power_changed(struct power_supply *psy)
 {
 }
 
+static int rn5t618_adp_get_property(struct power_supply *psy,
+				      enum power_supply_property psp,
+				      union power_supply_propval *val)
+{
+        struct rn5t618_charger_info *info = power_supply_get_drvdata(psy);
+	unsigned int chgstate;
+	unsigned int regval;
+	bool online;
+	int ret;
+
+	ret = regmap_read(info->rn5t618->regmap, RN5T618_CHGSTATE, &chgstate);
+	if (ret)
+		return ret;
+
+	online = !! (chgstate & 0x40);
+
+	switch(psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		val->intval = online;
+		break;
+	case POWER_SUPPLY_PROP_STATUS:
+		if (!online) {
+			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+			break;
+		}
+		val->intval = rn5t618_decode_status(chgstate);
+		if (val->intval == POWER_SUPPLY_STATUS_DISCHARGING)
+			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+
+		break;
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+		ret = regmap_read(info->rn5t618->regmap, RN5T618_REGISET1, &regval);
+		if (ret < 0)
+			return ret;
+
+		val->intval = 1000 * 100 * (1 + (regval & 0x1f));
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int rn5t618_adp_set_property(struct power_supply *psy,
+				     enum power_supply_property psp,
+				     const union power_supply_propval *val)
+{
+        struct rn5t618_charger_info *info = power_supply_get_drvdata(psy);
+	int ret;
+
+        switch (psp) {
+        case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+		if ((val->intval < 100000) || (val->intval > 1500000))
+			return -EINVAL;
+
+		/* input limit */
+		ret = regmap_write(info->rn5t618->regmap, RN5T618_REGISET1,
+				   0x00 | ((val->intval - 1)/ 100000));
+		if (ret < 0)
+			return ret;
+
+		/* charge limit */
+		ret = regmap_update_bits(info->rn5t618->regmap, RN5T618_CHGISET,
+					 0x1F, ((val->intval - 1)/ 100000));
+		if (ret < 0)
+			return ret;
+
+                break;
+        default:
+                return -EINVAL;
+        }
+
+        return 0;
+}
+
 static int rn5t618_usb_get_property(struct power_supply *psy,
 				      enum power_supply_property psp,
 				      union power_supply_propval *val)
@@ -402,6 +487,16 @@ static const struct power_supply_desc rn5t618_gauge_desc = {
 
 };
 
+static const struct power_supply_desc rn5t618_adp_desc = {
+	.name                   = "rn5t618-adp",
+        .type                   = POWER_SUPPLY_TYPE_MAINS,
+        .properties             = rn5t618_usb_props,
+        .num_properties         = ARRAY_SIZE(rn5t618_adp_props),
+        .get_property           = rn5t618_adp_get_property,
+        .set_property           = rn5t618_adp_set_property,
+        .property_is_writeable  = rn5t618_usb_property_is_writeable,
+};
+
 static const struct power_supply_desc rn5t618_usb_desc = {
 	.name                   = "rn5t618-usb",
         .type                   = POWER_SUPPLY_TYPE_USB,
@@ -474,10 +569,17 @@ static int rn5t618_gauge_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	info->adp = devm_power_supply_register(&pdev->dev, &rn5t618_adp_desc, &psy_cfg);
+	if (IS_ERR(info->adp)) {
+		ret = PTR_ERR(info->adp);
+		dev_err(&pdev->dev, "failed to register adp: %d\n", ret);
+		return ret;
+	}
+
 	info->usb = devm_power_supply_register(&pdev->dev, &rn5t618_usb_desc, &psy_cfg);
 	if (IS_ERR(info->gauge)) {
 		ret = PTR_ERR(info->gauge);
-		dev_err(&pdev->dev, "failed to register gauge: %d\n", ret);
+		dev_err(&pdev->dev, "failed to register usb: %d\n", ret);
 		return ret;
 	}
 
