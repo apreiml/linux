@@ -77,17 +77,29 @@ static enum power_supply_property rn5t618_battery_props[] = {
 };
 
 static int rn5t618_battery_read_doublereg(struct rn5t618_power_info *info,
-					u8 reg, u16 *result)
+					  u8 reg, u16 *result)
 {
-	int ret;
+	int ret, i;
 	u8 data[2];
+	u16 old, new;
 
-	ret = regmap_bulk_read(info->rn5t618->regmap, reg, data, sizeof(data));
-	if (ret)
-		return ret;
+	old = 0;
+	/* Prevent races when registers are changing. */
+	for (i = 0; i < 3; i++) {
+		ret = regmap_bulk_read(info->rn5t618->regmap,
+				       reg, data, sizeof(data));
+		if (ret)
+			return ret;
 
-	*result = data[0] << 8;
-	*result |= data[1];
+		new = data[0] << 8;
+		new |= data[1];
+		if (new == old)
+			break;
+
+		old = new;
+	}
+
+	*result = new;
 
 	return 0;
 }
@@ -114,7 +126,7 @@ static int rn5t618_decode_status(unsigned int status)
 }
 
 static int rn5t618_battery_status(struct rn5t618_power_info *info,
-				union power_supply_propval *val)
+				  union power_supply_propval *val)
 {
 	unsigned int v;
 	int ret;
@@ -134,7 +146,7 @@ static int rn5t618_battery_status(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_present(struct rn5t618_power_info *info,
-				union power_supply_propval *val)
+				   union power_supply_propval *val)
 {
 	unsigned int v;
 	int ret;
@@ -153,7 +165,7 @@ static int rn5t618_battery_present(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_voltage_now(struct rn5t618_power_info *info,
-				     union power_supply_propval *val)
+				       union power_supply_propval *val)
 {
 	u16 res;
 	int ret;
@@ -168,7 +180,7 @@ static int rn5t618_battery_voltage_now(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_current_now(struct rn5t618_power_info *info,
-				union power_supply_propval *val)
+				       union power_supply_propval *val)
 {
 	u16 res;
 	int ret;
@@ -189,7 +201,7 @@ static int rn5t618_battery_current_now(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_capacity(struct rn5t618_power_info *info,
-				  union power_supply_propval *val)
+				    union power_supply_propval *val)
 {
 	unsigned int v;
 	int ret;
@@ -204,7 +216,7 @@ static int rn5t618_battery_capacity(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_temp(struct rn5t618_power_info *info,
-			      union power_supply_propval *val)
+				union power_supply_propval *val)
 {
 	u16 res;
 	int ret;
@@ -224,7 +236,7 @@ static int rn5t618_battery_temp(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_tte(struct rn5t618_power_info *info,
-			     union power_supply_propval *val)
+			       union power_supply_propval *val)
 {
 	u16 res;
 	int ret;
@@ -242,7 +254,7 @@ static int rn5t618_battery_tte(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_ttf(struct rn5t618_power_info *info,
-			     union power_supply_propval *val)
+			       union power_supply_propval *val)
 {
 	u16 res;
 	int ret;
@@ -260,7 +272,7 @@ static int rn5t618_battery_ttf(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_charge_full(struct rn5t618_power_info *info,
-				     union power_supply_propval *val)
+				       union power_supply_propval *val)
 {
 	u16 res;
 	int ret;
@@ -275,7 +287,7 @@ static int rn5t618_battery_charge_full(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_charge_now(struct rn5t618_power_info *info,
-				    union power_supply_propval *val)
+				      union power_supply_propval *val)
 {
 	u16 res;
 	int ret;
@@ -290,8 +302,8 @@ static int rn5t618_battery_charge_now(struct rn5t618_power_info *info,
 }
 
 static int rn5t618_battery_get_property(struct power_supply *psy,
-				      enum power_supply_property psp,
-				      union power_supply_propval *val)
+					enum power_supply_property psp,
+					union power_supply_propval *val)
 {
 	int ret = 0;
         struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
@@ -338,8 +350,8 @@ static int rn5t618_battery_get_property(struct power_supply *psy,
 }
 
 static int rn5t618_adp_get_property(struct power_supply *psy,
-				      enum power_supply_property psp,
-				      union power_supply_propval *val)
+				    enum power_supply_property psp,
+				    union power_supply_propval *val)
 {
         struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 	unsigned int chgstate;
@@ -382,8 +394,8 @@ static int rn5t618_adp_get_property(struct power_supply *psy,
 }
 
 static int rn5t618_adp_set_property(struct power_supply *psy,
-				     enum power_supply_property psp,
-				     const union power_supply_propval *val)
+				    enum power_supply_property psp,
+				    const union power_supply_propval *val)
 {
         struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 	int ret;
@@ -414,8 +426,8 @@ static int rn5t618_adp_set_property(struct power_supply *psy,
 }
 
 static int rn5t618_usb_get_property(struct power_supply *psy,
-				      enum power_supply_property psp,
-				      union power_supply_propval *val)
+				    enum power_supply_property psp,
+				    union power_supply_propval *val)
 {
         struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 	unsigned int chgstate;
@@ -458,8 +470,8 @@ static int rn5t618_usb_get_property(struct power_supply *psy,
 }
 
 static int rn5t618_usb_set_property(struct power_supply *psy,
-				     enum power_supply_property psp,
-				     const union power_supply_propval *val)
+				    enum power_supply_property psp,
+				    const union power_supply_propval *val)
 {
         struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 	int ret;
