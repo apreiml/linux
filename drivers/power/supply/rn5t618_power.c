@@ -137,7 +137,7 @@ static int rn5t618_battery_status(struct rn5t618_power_info *info,
 
 	val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
 
-	if (v & 0xc0) { /* USB or ADP plugged */	
+	if (v & 0xc0) { /* USB or ADP plugged */
 		val->intval = rn5t618_decode_status(v);
 	} else
 		val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
@@ -306,7 +306,7 @@ static int rn5t618_battery_get_property(struct power_supply *psy,
 					union power_supply_propval *val)
 {
 	int ret = 0;
-        struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
+	struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -353,7 +353,7 @@ static int rn5t618_adp_get_property(struct power_supply *psy,
 				    enum power_supply_property psp,
 				    union power_supply_propval *val)
 {
-        struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
+	struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 	unsigned int chgstate;
 	unsigned int regval;
 	bool online;
@@ -380,7 +380,8 @@ static int rn5t618_adp_get_property(struct power_supply *psy,
 
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
-		ret = regmap_read(info->rn5t618->regmap, RN5T618_REGISET1, &regval);
+		ret = regmap_read(info->rn5t618->regmap,
+				  RN5T618_REGISET1, &regval);
 		if (ret < 0)
 			return ret;
 
@@ -397,11 +398,11 @@ static int rn5t618_adp_set_property(struct power_supply *psy,
 				    enum power_supply_property psp,
 				    const union power_supply_propval *val)
 {
-        struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
+	struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 	int ret;
 
-        switch (psp) {
-        case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+	switch (psp) {
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 		if ((val->intval < 100000) || (val->intval > 1500000))
 			return -EINVAL;
 
@@ -412,24 +413,25 @@ static int rn5t618_adp_set_property(struct power_supply *psy,
 			return ret;
 
 		/* charge limit */
-		ret = regmap_update_bits(info->rn5t618->regmap, RN5T618_CHGISET,
+		ret = regmap_update_bits(info->rn5t618->regmap,
+					 RN5T618_CHGISET,
 					 0x1F, ((val->intval - 1)/ 100000));
 		if (ret < 0)
 			return ret;
 
-                break;
-        default:
-                return -EINVAL;
-        }
+		break;
+	default:
+		return -EINVAL;
+	}
 
-        return 0;
+	return 0;
 }
 
 static int rn5t618_usb_get_property(struct power_supply *psy,
 				    enum power_supply_property psp,
 				    union power_supply_propval *val)
 {
-        struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
+	struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 	unsigned int chgstate;
 	unsigned int regval;
 	bool online;
@@ -456,7 +458,8 @@ static int rn5t618_usb_get_property(struct power_supply *psy,
 
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
-		ret = regmap_read(info->rn5t618->regmap, RN5T618_REGISET2, &regval);
+		ret = regmap_read(info->rn5t618->regmap, RN5T618_REGISET2,
+				  &regval);
 		if (ret < 0)
 			return ret;
 
@@ -473,11 +476,11 @@ static int rn5t618_usb_set_property(struct power_supply *psy,
 				    enum power_supply_property psp,
 				    const union power_supply_propval *val)
 {
-        struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
+	struct rn5t618_power_info *info = power_supply_get_drvdata(psy);
 	int ret;
 
-        switch (psp) {
-        case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+	switch (psp) {
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 		if ((val->intval < 100000) || (val->intval > 1500000))
 			return -EINVAL;
 
@@ -488,17 +491,18 @@ static int rn5t618_usb_set_property(struct power_supply *psy,
 			return ret;
 
 		/* charge limit */
-		ret = regmap_update_bits(info->rn5t618->regmap, RN5T618_CHGISET,
+		ret = regmap_update_bits(info->rn5t618->regmap,
+					 RN5T618_CHGISET,
 					 0x1F, ((val->intval - 1)/ 100000));
 		if (ret < 0)
 			return ret;
 
-                break;
-        default:
-                return -EINVAL;
-        }
+		break;
+	default:
+		return -EINVAL;
+	}
 
-        return 0;
+	return 0;
 }
 
 static int rn5t618_usb_property_is_writeable(struct power_supply *psy,
@@ -514,38 +518,37 @@ static int rn5t618_usb_property_is_writeable(struct power_supply *psy,
 
 static const struct power_supply_desc rn5t618_battery_desc = {
 	.name                   = "rn5t618-battery",
-        .type                   = POWER_SUPPLY_TYPE_BATTERY,
-        .properties             = rn5t618_battery_props,
-        .num_properties         = ARRAY_SIZE(rn5t618_battery_props),
-        .get_property           = rn5t618_battery_get_property,
-
+	.type                   = POWER_SUPPLY_TYPE_BATTERY,
+	.properties             = rn5t618_battery_props,
+	.num_properties         = ARRAY_SIZE(rn5t618_battery_props),
+	.get_property           = rn5t618_battery_get_property,
 };
 
 static const struct power_supply_desc rn5t618_adp_desc = {
 	.name                   = "rn5t618-adp",
-        .type                   = POWER_SUPPLY_TYPE_MAINS,
-        .properties             = rn5t618_usb_props,
-        .num_properties         = ARRAY_SIZE(rn5t618_adp_props),
-        .get_property           = rn5t618_adp_get_property,
-        .set_property           = rn5t618_adp_set_property,
-        .property_is_writeable  = rn5t618_usb_property_is_writeable,
+	.type                   = POWER_SUPPLY_TYPE_MAINS,
+	.properties             = rn5t618_usb_props,
+	.num_properties         = ARRAY_SIZE(rn5t618_adp_props),
+	.get_property           = rn5t618_adp_get_property,
+	.set_property           = rn5t618_adp_set_property,
+	.property_is_writeable  = rn5t618_usb_property_is_writeable,
 };
 
 static const struct power_supply_desc rn5t618_usb_desc = {
 	.name                   = "rn5t618-usb",
         .type                   = POWER_SUPPLY_TYPE_USB,
         .properties             = rn5t618_usb_props,
-        .num_properties         = ARRAY_SIZE(rn5t618_usb_props),
-        .get_property           = rn5t618_usb_get_property,
-        .set_property           = rn5t618_usb_set_property,
-        .property_is_writeable  = rn5t618_usb_property_is_writeable,
+	.num_properties         = ARRAY_SIZE(rn5t618_usb_props),
+	.get_property           = rn5t618_usb_get_property,
+	.set_property           = rn5t618_usb_set_property,
+	.property_is_writeable  = rn5t618_usb_property_is_writeable,
 };
 
 static irqreturn_t rn5t618_charger_irq(int irq, void *data)
 {
 	struct device *dev = data;
 	struct rn5t618_power_info *info = dev_get_drvdata(dev);
-	
+
 	unsigned int ctrl, stat1, stat2, err;
 
 	regmap_read(info->rn5t618->regmap, RN5T618_CHGERR_IRR, &err);
@@ -575,7 +578,7 @@ static int rn5t618_power_probe(struct platform_device *pdev)
 	struct power_supply_config psy_cfg = {};
 	struct rn5t618_power_info *info;
 
-        info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
+	info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
 
@@ -583,7 +586,7 @@ static int rn5t618_power_probe(struct platform_device *pdev)
 	info->rn5t618 = dev_get_drvdata(pdev->dev.parent);
 	info->irq = -1;
 
-        platform_set_drvdata(pdev, info);
+	platform_set_drvdata(pdev, info);
 
 	ret = regmap_read(info->rn5t618->regmap, RN5T618_CONTROL, &v);
 	if (ret)
@@ -602,21 +605,27 @@ static int rn5t618_power_probe(struct platform_device *pdev)
 	}
 
 	psy_cfg.drv_data = info;
-	info->battery = devm_power_supply_register(&pdev->dev, &rn5t618_battery_desc, &psy_cfg);
+	info->battery = devm_power_supply_register(&pdev->dev,
+						   &rn5t618_battery_desc,
+						   &psy_cfg);
 	if (IS_ERR(info->battery)) {
 		ret = PTR_ERR(info->battery);
 		dev_err(&pdev->dev, "failed to register battery: %d\n", ret);
 		return ret;
 	}
 
-	info->adp = devm_power_supply_register(&pdev->dev, &rn5t618_adp_desc, &psy_cfg);
+	info->adp = devm_power_supply_register(&pdev->dev,
+					       &rn5t618_adp_desc,
+					       &psy_cfg);
 	if (IS_ERR(info->adp)) {
 		ret = PTR_ERR(info->adp);
 		dev_err(&pdev->dev, "failed to register adp: %d\n", ret);
 		return ret;
 	}
 
-	info->usb = devm_power_supply_register(&pdev->dev, &rn5t618_usb_desc, &psy_cfg);
+	info->usb = devm_power_supply_register(&pdev->dev,
+					       &rn5t618_usb_desc,
+					       &psy_cfg);
 	if (IS_ERR(info->usb)) {
 		ret = PTR_ERR(info->usb);
 		dev_err(&pdev->dev, "failed to register usb: %d\n", ret);
@@ -633,12 +642,13 @@ static int rn5t618_power_probe(struct platform_device *pdev)
 		ret = devm_request_threaded_irq(&pdev->dev, info->irq, NULL,
 						rn5t618_charger_irq,
 						IRQF_ONESHOT,
-                                                "rn5t618_power",
-                                                &pdev->dev);
+						"rn5t618_power",
+						&pdev->dev);
 
 		if (ret < 0) {
-			dev_err(&pdev->dev, "request IRQ:%d fail\n", info->irq);
-                        info->irq = -1;
+			dev_err(&pdev->dev, "request IRQ:%d fail\n",
+				info->irq);
+			info->irq = -1;
 		}
 	}
 
@@ -646,14 +656,13 @@ static int rn5t618_power_probe(struct platform_device *pdev)
 }
 
 static struct platform_driver rn5t618_power_driver = {
-        .driver = {
-                .name   = "rn5t618-power",
-        },
-        .probe = rn5t618_power_probe,
+	.driver = {
+		.name   = "rn5t618-power",
+	},
+	.probe = rn5t618_power_probe,
 };
 
 module_platform_driver(rn5t618_power_driver);
 MODULE_ALIAS("platform:rn5t618-power");
 MODULE_DESCRIPTION("Power supply driver for RICOH RN5T618");
 MODULE_LICENSE("GPL");
-
