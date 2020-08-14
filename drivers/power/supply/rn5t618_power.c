@@ -17,6 +17,9 @@
 #include <linux/regmap.h>
 #include <linux/slab.h>
 
+#define CHG_STATE_ADP_INPUT 0x40
+#define CHG_STATE_USB_INPUT 0x80
+#define CHG_STATE_MASK	0x1f
 #define CHG_STATE_CHG_OFF	0
 #define CHG_STATE_CHG_READY_VADP	1
 #define CHG_STATE_CHG_TRICKLE	2
@@ -32,6 +35,8 @@
 #define CHG_STATE_DIE_SHUTDOWN	12
 #define CHG_STATE_NO_BAT2	13
 #define CHG_STATE_CHG_READY_VUSB	14
+
+#define FG_ENABLE 1
 
 struct rn5t618_power_info {
 	struct rn5t618 *rn5t618;
@@ -89,7 +94,7 @@ static int rn5t618_battery_read_doublereg(struct rn5t618_power_info *info,
 
 static int rn5t618_decode_status(unsigned int status)
 {
-	switch(status & 0x1f) {
+	switch(status & CHG_STATE_MASK) {
 	case CHG_STATE_CHG_OFF:
 	case CHG_STATE_SUSPEND:
 	case CHG_STATE_VCHG_OVER_VOL:
@@ -138,7 +143,7 @@ static int rn5t618_battery_present(struct rn5t618_power_info *info,
 	if (ret)
 		return ret;
 
-	v &= 0x1f;
+	v &= CHG_STATE_MASK;
 	if ((v == CHG_STATE_NO_BAT) || (v == CHG_STATE_NO_BAT2))
 		val->intval = 0;
 	else
@@ -173,6 +178,7 @@ static int rn5t618_battery_current_now(struct rn5t618_power_info *info,
 		return ret;
 
 	val->intval = res;
+	/* 2's complement */
 	if (val->intval & (1 << 13))
 		val->intval = val->intval - (1 << 14);
 
@@ -208,10 +214,11 @@ static int rn5t618_battery_temp(struct rn5t618_power_info *info,
 		return ret;
 
 	val->intval = res;
+	/* 2's complement */
 	if (val->intval & (1 << 11))
 		val->intval = val->intval - (1 << 12);
 
-	val->intval /= 16;
+	val->intval = val->intval * 10 / 16;
 
 	return 0;
 }
@@ -344,7 +351,7 @@ static int rn5t618_adp_get_property(struct power_supply *psy,
 	if (ret)
 		return ret;
 
-	online = !! (chgstate & 0x40);
+	online = !! (chgstate & CHG_STATE_ADP_INPUT);
 
 	switch(psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
@@ -365,7 +372,7 @@ static int rn5t618_adp_get_property(struct power_supply *psy,
 		if (ret < 0)
 			return ret;
 
-		val->intval = 1000 * 100 * (1 + (regval & 0x1f));
+		val->intval = 1000 * 100 * (1 + (regval & CHG_STATE_MASK));
 		break;
 	default:
 		return -EINVAL;
@@ -420,7 +427,7 @@ static int rn5t618_usb_get_property(struct power_supply *psy,
 	if (ret)
 		return ret;
 
-	online = !! (chgstate & 0x80);
+	online = !! (chgstate & CHG_STATE_USB_INPUT);
 
 	switch(psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
@@ -441,7 +448,7 @@ static int rn5t618_usb_get_property(struct power_supply *psy,
 		if (ret < 0)
 			return ret;
 
-		val->intval = 1000 * 100 * (1 + (regval & 0x1f));
+		val->intval = 1000 * 100 * (1 + (regval & CHG_STATE_MASK));
 		break;
 	default:
 		return -EINVAL;
@@ -539,7 +546,7 @@ static irqreturn_t rn5t618_charger_irq(int irq, void *data)
 	regmap_write(info->rn5t618->regmap, RN5T618_CHGSTAT_IRR1, 0);
 	regmap_write(info->rn5t618->regmap, RN5T618_CHGSTAT_IRR2, 0);
 
-	dev_info(dev, "chgerr: %x chgctrl: %x chgstat: %x chgstat2: %x\n",
+	dev_dbg(dev, "chgerr: %x chgctrl: %x chgstat: %x chgstat2: %x\n",
 		err, ctrl, stat1, stat2);
 
 	power_supply_changed(info->usb);
@@ -570,11 +577,16 @@ static int rn5t618_power_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	if (! (v & 1)) {
+	if (! (v & FG_ENABLE)) {
+		/* E.g. the vendor kernels of various Kobo and Tolino Ebook
+		 * readers disable the fuel gauge on shutdown. If a kernel
+		 * without fuel gauge support is booted after that, the fuel
+		 * gauge will get decalibrated.
+		 */
 		dev_info(&pdev->dev, "Fuel gauge not enabled, enabling now\n");
 		dev_info(&pdev->dev, "Expect unprecise results\n");
 		regmap_update_bits(info->rn5t618->regmap, RN5T618_CONTROL,
-				   1, 1);
+				   FG_ENABLE, FG_ENABLE);
 	}
 
 	psy_cfg.drv_data = info;
