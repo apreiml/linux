@@ -157,7 +157,8 @@ static int rn5t618_gauge_current_now(struct rn5t618_charger_info *info,
 	if (val->intval & (1 << 13))
 		val->intval = val->intval - (1 << 14);
 
-	val->intval *= 1000;
+	/* negate current to be positive when discharging */
+	val->intval *= -1000;
 
 	return 0;
 }
