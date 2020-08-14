@@ -128,6 +128,25 @@ static int rn5t618_gauge_status(struct rn5t618_charger_info *info,
 	return ret;
 }
 
+static int rn5t618_gauge_present(struct rn5t618_charger_info *info,
+				union power_supply_propval *val)
+{
+	unsigned int v;
+	int ret;
+
+	ret = regmap_read(info->rn5t618->regmap, RN5T618_CHGSTATE, &v);
+	if (ret)
+		return ret;
+
+	v &= 0x1f;
+	if ((v == CHG_STATE_NO_BAT) || (v == CHG_STATE_NO_BAT2))
+		val->intval = 0;
+	else
+		val->intval = 1;
+
+	return ret;
+}
+
 static int rn5t618_gauge_voltage_now(struct rn5t618_charger_info *info,
 				     union power_supply_propval *val)
 {
@@ -275,7 +294,7 @@ static int rn5t618_gauge_get_property(struct power_supply *psy,
 		ret = rn5t618_gauge_status(info, val);
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
-		val->intval = 1;
+		ret = rn5t618_gauge_present(info, val);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		ret = rn5t618_gauge_voltage_now(info, val);
