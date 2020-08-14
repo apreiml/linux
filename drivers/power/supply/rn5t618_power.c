@@ -106,7 +106,7 @@ static int rn5t618_battery_read_doublereg(struct rn5t618_power_info *info,
 
 static int rn5t618_decode_status(unsigned int status)
 {
-	switch(status & CHG_STATE_MASK) {
+	switch (status & CHG_STATE_MASK) {
 	case CHG_STATE_CHG_OFF:
 	case CHG_STATE_SUSPEND:
 	case CHG_STATE_VCHG_OVER_VOL:
@@ -363,9 +363,9 @@ static int rn5t618_adp_get_property(struct power_supply *psy,
 	if (ret)
 		return ret;
 
-	online = !! (chgstate & CHG_STATE_ADP_INPUT);
+	online = !!(chgstate & CHG_STATE_ADP_INPUT);
 
-	switch(psp) {
+	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = online;
 		break;
@@ -408,14 +408,14 @@ static int rn5t618_adp_set_property(struct power_supply *psy,
 
 		/* input limit */
 		ret = regmap_write(info->rn5t618->regmap, RN5T618_REGISET1,
-				   0x00 | ((val->intval - 1)/ 100000));
+				   0x00 | ((val->intval - 1) / 100000));
 		if (ret < 0)
 			return ret;
 
 		/* charge limit */
 		ret = regmap_update_bits(info->rn5t618->regmap,
 					 RN5T618_CHGISET,
-					 0x1F, ((val->intval - 1)/ 100000));
+					 0x1F, ((val->intval - 1) / 100000));
 		if (ret < 0)
 			return ret;
 
@@ -441,9 +441,9 @@ static int rn5t618_usb_get_property(struct power_supply *psy,
 	if (ret)
 		return ret;
 
-	online = !! (chgstate & CHG_STATE_USB_INPUT);
+	online = !!(chgstate & CHG_STATE_USB_INPUT);
 
-	switch(psp) {
+	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = online;
 		break;
@@ -486,14 +486,14 @@ static int rn5t618_usb_set_property(struct power_supply *psy,
 
 		/* input limit */
 		ret = regmap_write(info->rn5t618->regmap, RN5T618_REGISET2,
-				   0xE0 | ((val->intval - 1)/ 100000));
+				   0xE0 | ((val->intval - 1) / 100000));
 		if (ret < 0)
 			return ret;
 
 		/* charge limit */
 		ret = regmap_update_bits(info->rn5t618->regmap,
 					 RN5T618_CHGISET,
-					 0x1F, ((val->intval - 1)/ 100000));
+					 0x1F, ((val->intval - 1) / 100000));
 		if (ret < 0)
 			return ret;
 
@@ -536,8 +536,8 @@ static const struct power_supply_desc rn5t618_adp_desc = {
 
 static const struct power_supply_desc rn5t618_usb_desc = {
 	.name                   = "rn5t618-usb",
-        .type                   = POWER_SUPPLY_TYPE_USB,
-        .properties             = rn5t618_usb_props,
+	.type                   = POWER_SUPPLY_TYPE_USB,
+	.properties             = rn5t618_usb_props,
 	.num_properties         = ARRAY_SIZE(rn5t618_usb_props),
 	.get_property           = rn5t618_usb_get_property,
 	.set_property           = rn5t618_usb_set_property,
@@ -592,7 +592,7 @@ static int rn5t618_power_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	if (! (v & FG_ENABLE)) {
+	if (!(v & FG_ENABLE)) {
 		/* E.g. the vendor kernels of various Kobo and Tolino Ebook
 		 * readers disable the fuel gauge on shutdown. If a kernel
 		 * without fuel gauge support is booted after that, the fuel
