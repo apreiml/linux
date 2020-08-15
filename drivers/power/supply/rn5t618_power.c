@@ -375,7 +375,7 @@ static int rn5t618_adp_get_property(struct power_supply *psy,
 			break;
 		}
 		val->intval = rn5t618_decode_status(chgstate);
-		if (val->intval == POWER_SUPPLY_STATUS_DISCHARGING)
+		if (val->intval != POWER_SUPPLY_STATUS_CHARGING)
 			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
 
 		break;
@@ -420,7 +420,7 @@ static int rn5t618_usb_get_property(struct power_supply *psy,
 			break;
 		}
 		val->intval = rn5t618_decode_status(chgstate);
-		if (val->intval == POWER_SUPPLY_STATUS_DISCHARGING)
+		if (val->intval != POWER_SUPPLY_STATUS_CHARGING)
 			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
 
 		break;
