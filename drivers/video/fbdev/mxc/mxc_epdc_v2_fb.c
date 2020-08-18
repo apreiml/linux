@@ -223,13 +223,13 @@ struct mxc_epdc_fb_data {
 	bool wv_modes_update;
 	bool waveform_is_advanced;
 	u32 *waveform_buffer_virt;
-	u32 waveform_buffer_phys;
+	dma_addr_t waveform_buffer_phys;
 	u32 waveform_buffer_size;
 	u32 *working_buffer_virt;
-	u32 working_buffer_phys;
+	dma_addr_t working_buffer_phys;
 	u32 working_buffer_size;
 	u32 *tmp_working_buffer_virt;
-	u32 tmp_working_buffer_phys;
+	dma_addr_t tmp_working_buffer_phys;
 	dma_addr_t *phys_addr_updbuf;
 	void **virt_addr_updbuf;
 	u32 upd_buffer_num;
@@ -1249,7 +1249,7 @@ static void dump_collision_list(struct mxc_epdc_fb_data *fb_data)
 		dev_info(fb_data->dev, "Empty");
 	list_for_each_entry(plist, &fb_data->upd_buf_collision_list, list) {
 		dev_info(fb_data->dev, "Virt Addr = 0x%x, Phys Addr = 0x%x ",
-			(u32)plist->virt_addr, plist->phys_addr);
+			(u32)plist->virt_addr, (u32)plist->phys_addr);
 		dump_update_data(fb_data->dev, plist);
 	}
 }
@@ -1263,7 +1263,7 @@ static void dump_free_list(struct mxc_epdc_fb_data *fb_data)
 		dev_info(fb_data->dev, "Empty");
 	list_for_each_entry(plist, &fb_data->upd_buf_free_list, list)
 		dev_info(fb_data->dev, "Virt Addr = 0x%x, Phys Addr = 0x%x ",
-			(u32)plist->virt_addr, plist->phys_addr);
+			(u32)plist->virt_addr, (u32)plist->phys_addr);
 }
 
 static void dump_queue(struct mxc_epdc_fb_data *fb_data)
@@ -1275,7 +1275,7 @@ static void dump_queue(struct mxc_epdc_fb_data *fb_data)
 		dev_info(fb_data->dev, "Empty");
 	list_for_each_entry(plist, &fb_data->upd_buf_queue, list) {
 		dev_info(fb_data->dev, "Virt Addr = 0x%x, Phys Addr = 0x%x ",
-			(u32)plist->virt_addr, plist->phys_addr);
+			(u32)plist->virt_addr, (u32)plist->phys_addr);
 		dump_update_data(fb_data->dev, plist);
 	}
 }
