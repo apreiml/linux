@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: (GPL-2.0)
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Device tree for the Tolino Shine 2 HD ebook reader
  *
- * Name on mainboard is: 37NB-E60QF0+4A2
+ * Name on mainboard is: 37NB-E60QF0+4A2 or 37NB-E60QF0+4A3
  * Serials start with: E60QF2
  *
  * Copyright 2020 Andreas Kemnade
@@ -536,7 +536,10 @@
 };
 
 &snvs_rtc {
-	/* we are using the RTC in the PMIC, not disabled in imx6sl.dtsi */
+	/*
+	 * We are using the RTC in the PMIC, but this one is not disabled
+	 * in imx6sl.dtsi.
+	 */
 	status = "disabled";
 };
 
@@ -554,6 +557,8 @@
 	pinctrl-3 = <&pinctrl_usdhc2_sleep>;
 	non-removable;
 	status = "okay";
+
+	/* internal uSD card */
 };
 
 &usdhc3 {
@@ -568,7 +573,10 @@
 	non-removable;
 	status = "okay";
 
-	/* CyberTan WC121 SDIO WiFi */
+	/*
+	 * 37NB-E60QF0+4A2: CyberTan WC121 (BCM43362) SDIO WiFi
+	 * 37NB-E60QF0+4A3: RTL8189F SDIO WiFi
+	 */
 };
 
 
