@@ -79,7 +79,7 @@
 		regulator-name = "SD3_SPWR";
 		regulator-min-microvolt = <3000000>;
 		regulator-max-microvolt = <3000000>;
-		gpio = <&gpio4 29 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio4 29 GPIO_ACTIVE_LOW>;
 	};
 
 	wifi_pwrseq: wifi_pwrseq {
@@ -116,7 +116,6 @@
 		interrupt-parent = <&gpio5>;
 		interrupts = <6 IRQ_TYPE_EDGE_FALLING>;
 		vdd-supply = <&ldo1_reg>;
-
 		reset-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
 		x-size = <1072>;
 		y-size = <1448>;
@@ -578,7 +577,6 @@
 	 * 37NB-E60QF0+4A3: RTL8189F SDIO WiFi
 	 */
 };
-
 
 &usbotg1 {
 	pinctrl-names = "default";
