@@ -428,7 +428,7 @@ static const struct power_supply_desc rn5t618_battery_desc = {
 static const struct power_supply_desc rn5t618_adp_desc = {
 	.name                   = "rn5t618-adp",
 	.type                   = POWER_SUPPLY_TYPE_MAINS,
-	.properties             = rn5t618_usb_props,
+	.properties             = rn5t618_adp_props,
 	.num_properties         = ARRAY_SIZE(rn5t618_adp_props),
 	.get_property           = rn5t618_adp_get_property,
 };
