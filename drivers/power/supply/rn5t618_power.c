@@ -7,6 +7,7 @@
 
 #include <linux/kernel.h>
 #include <linux/device.h>
+#include <linux/bitops.h>
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -185,13 +186,8 @@ static int rn5t618_battery_current_now(struct rn5t618_power_info *info,
 	if (ret)
 		return ret;
 
-	val->intval = res;
-	/* 2's complement */
-	if (val->intval & (1 << 13))
-		val->intval = val->intval - (1 << 14);
-
-	/* negate current to be positive when discharging */
-	val->intval *= -1000;
+	/* current is negative when discharging */
+	val->intval = sign_extend32(res, 13) * 1000;
 
 	return 0;
 }
@@ -221,12 +217,7 @@ static int rn5t618_battery_temp(struct rn5t618_power_info *info,
 	if (ret)
 		return ret;
 
-	val->intval = res;
-	/* 2's complement */
-	if (val->intval & (1 << 11))
-		val->intval = val->intval - (1 << 12);
-
-	val->intval = val->intval * 10 / 16;
+	val->intval = sign_extend32(res, 11) * 10 / 16;
 
 	return 0;
 }
