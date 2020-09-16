@@ -89,7 +89,7 @@
  */
 /*#define DEFAULT_PANEL_HW_INIT*/
 
-#define NUM_SCREENS_MIN	2
+#define NUM_SCREENS_MIN	1
 
 #define EPDC_V1_NUM_LUTS	16
 #define EPDC_V1_MAX_NUM_UPDATES 20
@@ -118,7 +118,7 @@
 
 /* #define EPD_SUSPEND_BLANK	1 */
 
-static unsigned long default_bpp = 16;
+static unsigned long default_bpp = 8;
 static DEFINE_MUTEX(hard_lock);
 
 struct update_marker_data {
@@ -2146,10 +2146,8 @@ static int mxc_epdc_fb_check_var(struct fb_var_screeninfo *var,
 	if (var->yres_virtual < var->yoffset + var->yres)
 		var->yres_virtual = var->yoffset + var->yres;
 
-	if ((var->bits_per_pixel != 32) && (var->bits_per_pixel != 24) &&
-	    (var->bits_per_pixel != 16) && (var->bits_per_pixel != 8))
-		var->bits_per_pixel = default_bpp;
-
+	var->bits_per_pixel = 8;
+	var->grayscale = GRAYSCALE_8BIT;
 	switch (var->bits_per_pixel) {
 	case 8:
 		if (var->grayscale != 0) {
@@ -5034,7 +5032,7 @@ int mxc_epdc_fb_probe(struct platform_device *pdev)
 	fb_data->dev = &pdev->dev;
 
 	if (!fb_data->default_bpp)
-		fb_data->default_bpp = 16;
+		fb_data->default_bpp = 8;
 
 	/* Set default (first defined mode) before searching for a match */
 	fb_data->cur_mode = &fb_data->pdata->epdc_mode[0];
@@ -5123,7 +5121,7 @@ int mxc_epdc_fb_probe(struct platform_device *pdev)
 
 	var_info = &info->var;
 	var_info->activate = FB_ACTIVATE_TEST;
-	var_info->bits_per_pixel = fb_data->default_bpp;
+	var_info->bits_per_pixel = default_bpp;
 	var_info->xres = vmode->xres;
 	var_info->yres = vmode->yres;
 	var_info->xres_virtual = xres_virt;
