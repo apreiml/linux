@@ -20,6 +20,8 @@
 #include "mxc_epdc.h"
 #include "epdc_regs.h"
 #include "epdc_hw.h"
+/* TODO: should probably be untangled */
+#include "epdc_update.h"
 #include "epdc_waveform.h"
 
 struct imx_epdc_fb_mode {
@@ -432,6 +434,7 @@ void mxc_epdc_init_sequence(struct mxc_epdc *priv,struct drm_display_mode *m)
 
 	priv->in_init = true;
 	mxc_epdc_powerup(priv);
+	mxc_epdc_draw_mode0(priv);
 	/* Force power down event */
 	priv->powering_down = true;
 	mxc_epdc_powerdown(priv);
