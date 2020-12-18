@@ -25,6 +25,7 @@
 #include <drm/drm_probe_helper.h>
 #include "mxc_epdc.h"
 #include "epdc_hw.h"
+#include "epdc_update.h"
 #include "epdc_waveform.h"
 
 #define DRIVER_NAME "mxc_epdc"
@@ -41,6 +42,43 @@ int mxc_epdc_framebuffer_dirty(struct drm_framebuffer *fb,
 			      unsigned int color, struct drm_clip_rect *clips,
 			      unsigned int num_clips)
 {
+	struct mxc_epdc *priv = to_mxc_epdc(fb->dev);
+	struct drm_gem_cma_object *gem = drm_fb_cma_get_gem_obj(fb, 0);
+	int i;
+
+	if (num_clips > 1)
+		dev_dbg(fb->dev->dev, "num clips: %d\n", num_clips);
+
+	if (priv->epdc_mem_virt == NULL)
+		return 0;
+
+	for (i = 0; i < num_clips; i++) {
+		struct drm_rect clip_line;
+		struct mxcfb_update_data upd_region;
+		/* ignore cursor update */
+		if (clips[i].x2 - clips[i].x1 == 8 && clips[i].y2 - clips[i].y1 == 16)
+			continue;
+		dev_dbg(fb->dev->dev, "damaged: %d,%d-%d,%d\n",
+			clips[i].x1, clips[i].y1, clips[i].x2, clips[i].y2);
+
+		clip_line.x1 = 0;
+		clip_line.x2 = priv->epdc_mem_width;
+		clip_line.y1 = clips[i].y1;
+		clip_line.y2 = clips[i].y2;
+		drm_fb_xrgb8888_to_gray8(((u8 *)priv->epdc_mem_virt) +
+					 clips[i].y1 * priv->epdc_mem_width,
+					 gem->vaddr, fb, &clip_line);
+		upd_region.update_region.left = clips[i].x1;
+		upd_region.update_region.top = clips[i].y1;
+		upd_region.update_region.width = clips[i].x2 - clips[i].x1;
+		upd_region.update_region.height = clips[i].y2 - clips[i].y1;
+		upd_region.waveform_mode = WAVEFORM_MODE_AUTO;
+		upd_region.temp = TEMP_USE_AMBIENT;
+		upd_region.update_mode = UPDATE_MODE_PARTIAL;
+		upd_region.flags = 0;
+		mxc_epdc_fb_send_single_update(&upd_region, priv);
+	}
+
 	return 0;
 }
 
@@ -225,6 +263,7 @@ static void mxc_epdc_pipe_disable(struct drm_simple_display_pipe *pipe)
 	struct mxc_epdc *priv = drm_pipe_to_mxc_epdc(pipe);
 
 	dev_dbg(priv->drm.dev, "pipe disable\n");
+	mxc_epdc_flush_updates(priv);
 
 	if (priv->epdc_mem_virt) {
 		dma_free_wc(priv->drm.dev, priv->epdc_mem_width * priv->epdc_mem_height,
@@ -292,6 +331,10 @@ static int mxc_epdc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, priv);
 
 	ret = mxc_epdc_init_hw(priv);
+	if (ret)
+		return ret;
+
+	ret = mxc_epdc_init_update(priv);
 	if (ret)
 		return ret;
 
