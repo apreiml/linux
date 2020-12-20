@@ -56,7 +56,7 @@
 	panel: panel {
                 compatible = "panel-dpi";
 		panel-timing {
-			clock-frequency = <8000000>;
+			clock-frequency = <80000000>;
 			hactive = <1448>;
 			hback-porch = <16>;
 			hfront-porch = <102>;
