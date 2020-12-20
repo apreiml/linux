@@ -232,7 +232,6 @@ void epdc_init_settings(struct mxc_epdc *priv, struct drm_display_mode *m)
 	       EPDC_FORMAT_DEFAULT_TFT_PIXEL_MASK);
 	epdc_write(priv, EPDC_FORMAT, reg_val);
 	if (priv->rev >= 30) {
-		epdc_write(priv, EPDC_WB_FIELD3, 0xE881);
 		if (priv->buf_pix_fmt == EPDC_FORMAT_BUF_PIXEL_FORMAT_P5N) {
 		epdc_write(priv, EPDC_WB_FIELD2, /* 110 00101 0101 0100*/ 0xc554);
 		epdc_write(priv, EPDC_WB_FIELD1, /* 101 00000 0000 0100*/ 0xa004);
