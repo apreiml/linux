@@ -53,6 +53,27 @@
 		reg = <0x80000000 0x20000000>;
 	};
 
+	panel: panel {
+                compatible = "panel-dpi";
+		panel-timing {
+			clock-frequency = <8000000>;
+			hactive = <1448>;
+			hback-porch = <16>;
+			hfront-porch = <102>;
+			hsync-len = <28>;
+			vactive = <1072>;
+			vback-porch = <4>;
+			vfront-porch = <4>;
+			vsync-len = <2>;	
+		};
+
+                port {
+                        panel_in: endpoint {
+                                remote-endpoint = <&epdc_out>;
+                        };
+                };
+        };
+
 	reg_wifi: regulator-wifi {
 		compatible = "regulator-fixed";
 		regulator-name = "SD3_SPWR";
@@ -76,6 +97,12 @@
 	DISPLAY-supply = <&DISPLAY_reg>; 
 	TMST-supply = <&TMST_reg>; 
 	status = "okay";
+
+	port {
+		epdc_out: endpoint {
+			remote-endpoint = <&panel_in>;
+		};
+	};
 };
 
 &i2c1 {
