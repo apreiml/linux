@@ -822,6 +822,45 @@ static void epdc_submit_work_func(struct work_struct *work)
 	mutex_unlock(&priv->queue_mutex);
 }
 
+void mxc_epdc_flush_updates(struct mxc_epdc *priv)
+{
+	int ret;
+
+	if (priv->in_init)
+		return;
+
+	/* Grab queue lock to prevent any new updates from being submitted */
+	mutex_lock(&priv->queue_mutex);
+
+	/*
+	 * 3 places to check for updates that are active or pending:
+	 *   1) Updates in the pending list
+	 *   2) Update buffers in use (e.g., PxP processing)
+	 *   3) Active updates to panel - We can key off of EPDC
+	 *      power state to know if we have active updates.
+	 */
+	if (!list_empty(&priv->upd_pending_list) ||
+		!is_free_list_full(priv) ||
+		(priv->updates_active == true)) {
+		/* Initialize event signalling updates are done */
+		init_completion(&priv->updates_done);
+		priv->waiting_for_idle = true;
+
+		mutex_unlock(&priv->queue_mutex);
+		/* Wait for any currently active updates to complete */
+		ret = wait_for_completion_timeout(&priv->updates_done,
+						msecs_to_jiffies(8000));
+		if (!ret)
+			dev_err(priv->drm.dev,
+				"Flush updates timeout! ret = 0x%x\n", ret);
+
+		mutex_lock(&priv->queue_mutex);
+		priv->waiting_for_idle = false;
+	}
+
+	mutex_unlock(&priv->queue_mutex);
+}
+
 void mxc_epdc_draw_mode0(struct mxc_epdc *priv)
 {
 	u32 *upd_buf_ptr;
