@@ -214,6 +214,7 @@ static void mxc_epdc_pipe_disable(struct drm_simple_display_pipe *pipe)
 	struct mxc_epdc *priv = drm_pipe_to_mxc_epdc(pipe);
 
 	dev_dbg(priv->drm.dev, "pipe disable\n");
+	mxc_epdc_flush_updates(priv);
 
 	if (priv->epdc_mem_virt) {
 		dma_free_wc(priv->drm.dev, priv->epdc_mem_width * priv->epdc_mem_height,
