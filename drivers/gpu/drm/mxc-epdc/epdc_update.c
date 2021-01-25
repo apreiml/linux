@@ -7,7 +7,6 @@
  * Copyright 2017 NXP
  */
 
-#define DEBUG
 #include <linux/bits.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
