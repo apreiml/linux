@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: (GPL-2.0)
+/*
+ * Device tree for the Kobo Glo HD ebook reader.
+ *
+ * Name on mainboard is: 37NB-E60Q90+4A1
+ * Board name in uboot sources: E60Q90
+ *
+ * Copyright 2021 Armin Preiml
+ * based on works
+ * Copyright 2015 Freescale Semiconductor, Inc.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/gpio/gpio.h>
+#include "imx6sl.dtsi"
+
+/ {
+	model = "Kobo Glo HD";
+	compatible = "kobo,glo-hd", "fsl,imx6sl";
+
+	chosen {
+		stdout-path = "serial1:115200n8";
+	};
+
+	gpio_keys: gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		power {
+			label = "Power";
+			gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			wakeup-source;
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x80000000 0x20000000>;
+	};
+};
+
+&iomuxc {
+        i2c1grp {
+                fsl,pins = <
+			MX6SL_PAD_I2C1_SCL__I2C1_SCL 0x1f8b1
+			MX6SL_PAD_I2C1_SDA__I2C1_SDA 0x1f8b1
+		>;
+	};
+
+	i2c2grp {
+                fsl,pins = <
+			MX6SL_PAD_I2C2_SCL__I2C2_SCL 0x1f8b1
+			MX6SL_PAD_I2C2_SDA__I2C2_SDA 0x1f8b1
+		>;
+	};
+
+        i2c3grp {
+                fsl,pins = <
+			MX6SL_PAD_REF_CLK_32K__I2C3_SDA 0x1f8b1
+			MX6SL_PAD_REF_CLK_24M__I2C3_SCL 0x1f8b1
+		>;
+	};
+
+        pinctrl_gpio_keys: gpio_keysgrp {
+                fsl,pins = <
+			MX6SL_PAD_SD1_DAT1__GPIO5_IO08 0x110b0
+		>;
+	};
+
+        pinctrl_uart1: uart1grp {
+                fsl,pins = <
+			MX6SL_PAD_UART1_TXD__UART1_TX_DATA 0x1b0b1
+			MX6SL_PAD_UART1_RXD__UART1_RX_DATA 0x1b0b1
+		>;
+	};
+
+        pinctrl_usdhc2: usdhc2grp { /* 50MHZ (>50MHZ: 0x1f0f9) */
+                fsl,pins = <
+			MX6SL_PAD_SD2_CLK__SD2_CLK 0x1f071
+			MX6SL_PAD_SD2_CMD__SD2_CMD 0x1f071
+			MX6SL_PAD_SD2_DAT0__SD2_DATA0 0x1f071
+			MX6SL_PAD_SD2_DAT1__SD2_DATA1 0x1f071
+			MX6SL_PAD_SD2_DAT2__SD2_DATA2 0x1f071
+			MX6SL_PAD_SD2_DAT3__SD2_DATA3 0x1f071
+		>;
+	};
+
+        pinctrl_usdhc3: usdhc3grp {
+                fsl,pins = <
+			MX6SL_PAD_SD3_CLK__SD3_CLK 0x1f071
+			MX6SL_PAD_SD3_CMD__SD3_CMD 0x1f071
+			MX6SL_PAD_SD3_DAT0__SD3_DATA0 0x1f071
+			MX6SL_PAD_SD3_DAT1__SD3_DATA1 0x1f071
+			MX6SL_PAD_SD3_DAT2__SD3_DATA2 0x1f071
+			MX6SL_PAD_SD3_DAT3__SD3_DATA3 0x1f071
+		>;
+	};
+
+	pinctrl_usdhc4: usdhc4grp {
+		fsl,pins = <
+			MX6SL_PAD_FEC_MDIO__SD4_CLK 0x1f071
+			MX6SL_PAD_FEC_TX_CLK__SD4_CMD 0x1f071
+			MX6SL_PAD_FEC_RX_ER__SD4_DATA0 0x1f071
+			MX6SL_PAD_FEC_CRS_DV__SD4_DATA1 0x1f071
+			MX6SL_PAD_FEC_RXD1__SD4_DATA2 0x1f071
+			MX6SL_PAD_FEC_TXD0__SD4_DATA3 0x1f071
+			MX6SL_PAD_FEC_MDC__SD4_DATA4 0x1f071
+			MX6SL_PAD_FEC_RXD0__SD4_DATA5 0x1f071
+			MX6SL_PAD_FEC_TX_EN__SD4_DATA6 0x1f071
+			MX6SL_PAD_FEC_TXD1__SD4_DATA7 0x1f071
+		>;
+	};
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart1>;
+	status = "okay";
+};
+
+&usdhc2 {
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc2>;
+	status = "okay";
+};
+
+&usdhc3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc3>;
+	status = "okay";
+};
+
+&usdhc4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc4>;
+	status = "okay";
+};
