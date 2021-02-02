@@ -43,6 +43,121 @@
 	};
 };
 
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c3>;
+	clock-frequency = <100000>;
+	status = "okay";
+
+	rc5t619: pmic@32 {
+		compatible = "ricoh,rc5t619";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_pmic>;
+		reg = <0x32>;
+		interrupt-parent = <&gpio5>;
+                interrupts = <11 IRQ_TYPE_EDGE_FALLING>;
+		system-power-controller;
+		status = "okay";
+
+		regulators {
+			// vdd_core2_1v3_soc
+			dc1_reg: DCDC1 {
+				regulator-name = "DCDC1"; 
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-min-microvolt = <950000>;
+				regulator-max-microvolt = <1425000>;
+				regulator-state-mem {
+					regulator-on-in-suspend;
+					regulator-suspend-min-microvolt = <950000>;
+					regulator-suspend-max-microvolt = <950000>;
+				};
+			};
+
+			// vdd_core1_3v3
+			dc2_reg: DCDC2 {
+				regulator-name = "DCDC2";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+
+			// vdd_core2_1v3_arm
+			dc3_reg: DCDC3 {
+				regulator-name = "DCDC3";
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-min-microvolt = <950000>;
+				regulator-max-microvolt = <1425000>;
+				regulator-state-mem {
+					regulator-on-in-suspend;
+					regulator-suspend-min-microvolt = <950000>;
+					regulator-suspend-max-microvolt = <950000>;
+				};
+			};
+
+			// vdd_core4_1v2
+			dc4_reg: DCDC4 {
+				regulator-name = "DCDC4";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+
+			// vdd_core4_1v8
+			dc5_reg: DCDC5 {
+				regulator-name = "DCDC5";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+
+			// vdd_ir3v3
+			ldo1_reg: LDO1 {
+				regulator-name = "LDO1";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+
+			ldo2_reg: LDO2 {
+				regulator-name = "LDO2";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+
+			// vdd_core5_1v2
+			ldo3_reg: LDO3 {
+				regulator-name = "LDO3";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+
+			// vdd_spd_3v3
+			ldo5_reg: LDO5 {
+				regulator-name = "LDO5";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+
+			// vdd_ddr_0v6
+			ldo6_reg: LDO6 {
+				regulator-name = "LDO6";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+
+			// vdd_pwm, vdd_fl_0_pwm, vdd_fl_pwm
+			ldo7_reg: LDO7 {};
+
+			// vdd_rtc_3v3
+			ldortc1: LDORTC1 {
+				regulator-name = "LDORTC1";
+				regulator-always-on;
+				regulator-boot-on;
+			};
+		};
+	};
+};
+
+
+
 &iomuxc {
         i2c1grp {
                 fsl,pins = <
@@ -58,7 +173,7 @@
 		>;
 	};
 
-        i2c3grp {
+        pinctrl_i2c3: i2c3grp {
                 fsl,pins = <
 			MX6SL_PAD_REF_CLK_32K__I2C3_SDA 0x1f8b1
 			MX6SL_PAD_REF_CLK_24M__I2C3_SCL 0x1f8b1
@@ -68,6 +183,14 @@
         pinctrl_gpio_keys: gpio_keysgrp {
                 fsl,pins = <
 			MX6SL_PAD_SD1_DAT1__GPIO5_IO08 0x110b0
+		>;
+	};
+
+	pinctrl_pmic: pmicgrp {
+		fsl,pins = <
+                         MX6SL_PAD_SD1_CLK__GPIO5_IO15 0x17000  /* chg */
+                         MX6SL_PAD_SD1_DAT0__GPIO5_IO11 0x17000 /* irq */
+                         MX6SL_PAD_KEY_COL2__GPIO3_IO28 0x1b010 /* bat low */
 		>;
 	};
 
@@ -116,9 +239,30 @@
 	};
 };
 
+&reg_vdd1p1 {
+	vin-supply = <&dc2_reg>;
+};
+
+&reg_vdd2p5 {
+	vin-supply = <&dc2_reg>;
+};
+
+&reg_pu {
+	vin-supply = <&dc1_reg>;
+};
+
+&reg_soc {
+	vin-supply = <&dc1_reg>;
+};
+
+&reg_arm {
+	vin-supply = <&dc3_reg>;
+};
+
 &uart1 {
-	pinctrl-names = "default";
+	/* J4 upper right side on the board */
 	pinctrl-0 = <&pinctrl_uart1>;
+	pinctrl-names = "default";
 	status = "okay";
 };
 
