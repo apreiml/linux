@@ -201,6 +201,17 @@
 		>;
 	};
 
+	usbotg1grp {
+		fsl,pins = <
+			/* usbotg power gpio */
+			MX6SL_PAD_KEY_COL4__GPIO4_IO00 0x1f010
+			MX6SL_PAD_KEY_COL5__GPIO4_IO02 0x1f010
+			/* usb hsic pin */
+			MX6SL_PAD_HSIC_STROBE__USB_H_STROBE 0x17030
+			MX6SL_PAD_HSIC_DAT__USB_H_DATA 0x17030
+		>;
+	};
+
         pinctrl_usdhc2: usdhc2grp { /* 50MHZ (>50MHZ: 0x1f0f9) */
                 fsl,pins = <
 			MX6SL_PAD_SD2_CLK__SD2_CLK 0x1f071
@@ -284,3 +295,13 @@
 	pinctrl-0 = <&pinctrl_usdhc4>;
 	status = "okay";
 };
+
+&usbotg1 {
+	pinctrl-names = "default";
+	disable-over-current;
+	adp-disable;
+	srp-disable;
+	hnp-disable;
+	status = "okay";
+};
+
